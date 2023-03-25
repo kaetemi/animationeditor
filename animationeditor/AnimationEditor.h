@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ANIMATIONEDITOR_H
 #define ANIMATIONEDITOR_H
 
-#include "AnimationEditor_global.h"
+#include "AnimationEditorGlobal.h"
 
 #include <QWidget>
 

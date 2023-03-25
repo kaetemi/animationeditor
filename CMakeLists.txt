@@ -1,68 +1,44 @@
-########################################################################
-# CMake project
-PROJECT("AnimationEditor")
+# Set the minimum required version of CMake
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
-# Minimum required 2.6
-# Minimum required 2.8.11 for automatic linking to qtmain.lib
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6 FATAL_ERROR)
-# set (CMAKE_VERBOSE_MAKEFILE ON)
+# Set the project name
+project(AnimationEditor)
 
-IF (POLICY CMP0020)
-	CMAKE_POLICY(SET CMP0020 NEW)
-ENDIF ()
+# Ensure that we are not building in our source directories
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(FATAL_ERROR "Building in the source directory is not allowed.")
+endif()
 
+if(CMAKE_BINARY_DIR MATCHES "${CMAKE_SOURCE_DIR}/build.*")
+  # Build directory is valid
+else()
+  message(FATAL_ERROR "You must run cmake from a directory that is not in your source tree, or that is in a special subdirectory of the tree whose name begins with 'build'.")
+endif()
 
-########################################################################
-# Ensure that we are not building in our source directories.
+# Set the default build type
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif()
 
-SET(Build_Dir_OK "TRUE")
-STRING(REGEX MATCH "^${CMAKE_SOURCE_DIR}" In_Sub_Dir ${CMAKE_BINARY_DIR})
-IF (In_Sub_Dir)
-  STRING(REGEX MATCH "^${CMAKE_SOURCE_DIR}/build" In_Build_Dir ${CMAKE_BINARY_DIR})
-  IF (NOT In_Build_Dir)
-    SET(Build_Dir_OK "FALSE")
-  ENDIF ()
-ENDIF ()
+# Add the cmake directory to the module path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-IF (NOT Build_Dir_OK)
-  MESSAGE(FATAL_ERROR "You must run cmake from a directory that is not in your source tree, or that is in a special subdirectory of the tree whose name begins with 'build'.")
-ENDIF ()
-
-
-########################################################################
-# Set up the basic build environment
-
-IF (CMAKE_BUILD_TYPE STREQUAL "")
-  # CMake defaults to leaving CMAKE_BUILD_TYPE empty. This messes up
-  # differentiation between debug and release builds.
-  SET(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
-ENDIF ()
-
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
-
-########################################################################
 # Strip binary in release mode
+if(CMAKE_COMPILER_IS_GNUCXX)
+  set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
+endif()
 
-IF (CMAKE_COMPILER_IS_GNUCXX)
-  SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
-ENDIF ()
+# Set the output directories
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-########################################################################
-
-LINK_DIRECTORIES(
-  )
-INCLUDE_DIRECTORIES(
+# Link and include directories
+link_directories()
+include_directories(
   ${CMAKE_SOURCE_DIR}/animationeditor
-  )
+)
 
-########################################################################
-
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-
-########################################################################
-
-ADD_SUBDIRECTORY(animationeditor)
-
-########################################################################
+# Add the subdirectories
+add_subdirectory(animationeditor)
+add_subdirectory(sample)

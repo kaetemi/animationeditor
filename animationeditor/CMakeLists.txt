@@ -1,24 +1,33 @@
+# Find all the source files
+file(GLOB SRCS *.cpp)
+file(GLOB HDRS *.h)
+file(GLOB RESOURCES *.qrc)
 
-FILE(GLOB SRCS *.cpp)
-FILE(GLOB HDRS *.h)
-FILE(GLOB RESOURCES *.qrc)
+# Group the source files in the IDE
+source_group("resources" FILES ${RESOURCES})
+source_group("" FILES ${SRCS} ${HDRS})
 
-SOURCE_GROUP("resources" FILES ${RESOURCES} ${RSRC})
-SOURCE_GROUP("" FILES ${SRCS} ${HDRS})
+# Find the QtWidgets library, minimum 5.15 or 6.0
+# https://doc.qt.io/qt-6/cmake-qt5-and-qt6-compatibility.html
+find_package(Qt6 QUIET COMPONENTS Widgets)
+if(NOT Qt6_FOUND)
+  find_package(Qt5 5.15 REQUIRED COMPONENTS Widgets)
+endif()
 
-FIND_PACKAGE(Qt5Widgets)
-SET(CMAKE_AUTOMOC ON)
+# Instruct CMake to run moc automatically when needed
+set(CMAKE_AUTOMOC ON)
 
-QT5_ADD_RESOURCES(RESOURCE_ADDED ${RESOURCES})
+qt_add_resources(RESOURCE_ADDED ${RESOURCES})
 
-ADD_LIBRARY(animationeditor SHARED
-	${SRCS}
-	${HDRS}
-	${RESOURCE_ADDED}
+# Create the library target
+add_library(animationeditor SHARED
+  ${SRCS}
+  ${HDRS}
+  ${RESOURCE_ADDED}
 )
 
-TARGET_LINK_LIBRARIES(animationeditor
-	Qt5::Widgets
+target_link_libraries(animationeditor
+	Qt::Widgets
 )
 
-ADD_DEFINITIONS(-DANIMATIONEDITOR_LIB)
+target_compile_definitions(animationeditor PRIVATE -DANIMATIONEDITOR_LIB)
