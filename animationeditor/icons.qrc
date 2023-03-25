@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/errorlist">
+    <file alias="error.png">icons/cross-circle.png</file>
+    <file alias="warning.png">icons/exclamation.png</file>
+    <file alias="message.png">icons/information-white.png</file>
+  </qresource>
+</RCC>
