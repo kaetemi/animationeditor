@@ -36,6 +36,14 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include "AnimationEditorGlobal.h"
 
 #include <QWidget>
+#include <QToolBar>
+#include <QTreeView>
+
+#include "AnimationTrack.h"
+
+class AnimationTimelineEditor;
+class AnimationCurveEditor;
+class AnimationTimeScrubber;
 
 class ANIMATIONEDITOR_EXPORT AnimationEditor : public QWidget
 {
@@ -44,6 +52,13 @@ class ANIMATIONEDITOR_EXPORT AnimationEditor : public QWidget
 public:
 	AnimationEditor(QWidget *parent);
 	virtual ~AnimationEditor();
+
+private:
+	QToolBar *m_Toolbar;
+	QTreeView *m_TrackTreeView;
+	AnimationTimelineEditor *m_TimelineEditor;
+	AnimationCurveEditor *m_CurveEditor;
+	AnimationTimeScrubber *m_TimeScrubber;
 	
 }; /* class AnimationEditor */
 

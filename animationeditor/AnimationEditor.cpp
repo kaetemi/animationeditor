@@ -31,8 +31,69 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include "AnimationEditor.h"
 
-AnimationEditor::AnimationEditor(QWidget *parent) : QWidget(parent)
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QSplitter>
+
+#include "AnimationTimelineEditor.h"
+#include "AnimationCurveEditor.h"
+#include "AnimationTimeScrubber.h"
+
+AnimationEditor::AnimationEditor(QWidget *parent)
+    : QWidget(parent)
+    , m_Toolbar(new QToolBar(this))
+    , m_TrackTreeView(new QTreeView(this))
+    , m_TimelineEditor(new AnimationTimelineEditor(this))
+    , m_CurveEditor(new AnimationCurveEditor(this))
+    , m_TimeScrubber(new AnimationTimeScrubber(this))
 {
+	// Set up the toolbar
+	m_Toolbar->addAction("Action 1");
+	m_Toolbar->addAction("Action 2");
+
+	// Layout, first row for toolbar, second row a splitter
+	QVBoxLayout *mainLayout = new QVBoxLayout(this);
+	// mainLayout->setMargin(0);
+	// mainLayout->setSpacing(0);
+	mainLayout->addWidget(m_Toolbar);
+	QSplitter *splitter = new QSplitter(Qt::Horizontal, this);
+	// splitter->setHandleWidth(2);
+
+	// In the splitter, on both sides a vertical layout
+	// On the left side, first an extra toolbar that matches the time scrubber height, then the tree view
+	QWidget *leftWidget = new QWidget();
+	QVBoxLayout *leftLayout = new QVBoxLayout();
+	QToolBar *leftToolbar = new QToolBar(this);
+	leftToolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+	leftToolbar->setFixedHeight(30);
+	// leftToolbar->setContentsMargins(0, 0, 0, 0);
+	// leftLayout->setMargin(0);
+	// leftLayout->setSpacing(0);
+	leftLayout->addWidget(leftToolbar);
+	leftLayout->addWidget(m_TrackTreeView);
+	leftWidget->setLayout(leftLayout);
+	splitter->addWidget(leftWidget);
+
+	// On the right side, first the time scrubber, then either the curve editor or the timeline editor (we can switch visibility between at runtime)
+	QWidget *rightWidget = new QWidget();
+	QVBoxLayout *rightLayout = new QVBoxLayout();
+	m_TimeScrubber->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	m_TimeScrubber->setFixedHeight(30);
+	// m_TimeScrubber->setContentsMargins(0, 0, 0, 0);
+	// rightLayout->setMargin(0);
+	// rightLayout->setSpacing(0);
+	rightLayout->addWidget(m_TimeScrubber);
+	rightLayout->addWidget(m_TimelineEditor);
+	rightLayout->addWidget(m_CurveEditor);
+	m_CurveEditor->setVisible(false);
+	rightWidget->setLayout(rightLayout);
+	splitter->addWidget(rightWidget);
+
+	// Add the splitter to the main layout
+	mainLayout->addWidget(splitter);
+
+	// Set up the main layout
+	setLayout(mainLayout);
 }
 
 AnimationEditor::~AnimationEditor()
