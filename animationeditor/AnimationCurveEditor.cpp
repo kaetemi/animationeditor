@@ -29,24 +29,14 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 */
 
-#pragma once
-#ifndef ANIMATION_EDITOR__H
-#define ANIMATION_EDITOR__H
+#include "AnimationCurveEditor.h"
 
-#include "AnimationEditorGlobal.h"
-
-#include <QWidget>
-
-class ANIMATIONEDITOR_EXPORT AnimationEditor : public QWidget
+AnimationCurveEditor::AnimationCurveEditor(QWidget *parent) : QWidget(parent)
 {
-	Q_OBJECT
+}
 
-public:
-	AnimationEditor(QWidget *parent);
-	virtual ~AnimationEditor();
-	
-}; /* class AnimationEditor */
-
-#endif /* ANIMATION_EDITOR__H */
+AnimationCurveEditor::~AnimationCurveEditor()
+{
+}
 
 /* end of file */

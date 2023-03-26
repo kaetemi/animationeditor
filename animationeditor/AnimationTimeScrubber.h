@@ -30,23 +30,63 @@ This library contains code that was generated using ChatGPT and Copilot.
 */
 
 #pragma once
-#ifndef ANIMATION_EDITOR__H
-#define ANIMATION_EDITOR__H
+#ifndef ANIMATION_TIME_SCRUBBER__H
+#define ANIMATION_TIME_SCRUBBER__H
 
 #include "AnimationEditorGlobal.h"
 
 #include <QWidget>
 
-class ANIMATIONEDITOR_EXPORT AnimationEditor : public QWidget
+class ANIMATIONEDITOR_EXPORT AnimationTimeScrubber : public QWidget
 {
 	Q_OBJECT
 
 public:
-	AnimationEditor(QWidget *parent);
-	virtual ~AnimationEditor();
-	
+	explicit AnimationTimeScrubber(QWidget *parent = nullptr);
+	virtual ~AnimationTimeScrubber();
+
+	// Set the duration of the animation timeline.
+	void setDuration(float duration);
+
+	// Set the current time of the scrubber.
+	void setCurrentTime(float time);
+
+	// Get the current time of the scrubber.
+	float currentTime() const;
+
+signals:
+	// Signal emitted when the current time changes.
+	void currentTimeChanged(float time);
+
+protected:
+	// Override the paint event to draw the time ruler and scrubber handle.
+	void paintEvent(QPaintEvent *event) override;
+
+	// Override the mouse events to handle scrubber interactions.
+	void mousePressEvent(QMouseEvent *event) override;
+	void mouseMoveEvent(QMouseEvent *event) override;
+	void mouseReleaseEvent(QMouseEvent *event) override;
+
+private:
+	// Convert the timeline duration to a pixel value.
+	int timeToPixel(float time) const;
+
+	// Convert a pixel value to the timeline duration.
+	float pixelToTime(int pixel) const;
+
+	// Helper method to calculate the width of the ruler.
+	int rulerWidth() const;
+
+	// The duration of the animation timeline.
+	float m_duration;
+
+	// The current time of the scrubber.
+	float m_currentTime;
+
+	// A flag indicating whether the user is currently dragging the scrubber.
+	bool m_isDragging;
 }; /* class AnimationEditor */
 
-#endif /* ANIMATION_EDITOR__H */
+#endif /* ANIMATION_TIME_SCRUBBER__H */
 
 /* end of file */
