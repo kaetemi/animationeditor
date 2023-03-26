@@ -54,7 +54,8 @@ public:
 	virtual ~AnimationEditor();
 
 private:
-	QToolBar *m_Toolbar;
+	QToolBar *m_ToolBar;
+	QToolBar *m_TrackTreeToolBar;
 	QTreeView *m_TrackTreeView;
 	AnimationTimelineEditor *m_TimelineEditor;
 	AnimationCurveEditor *m_CurveEditor;
