@@ -46,17 +46,17 @@ public:
 	virtual ~AnimationTimeScrubber();
 
 	// Set the duration of the animation timeline.
-	void setDuration(float duration);
+	void setDuration(double duration);
 
 	// Set the current time of the scrubber.
-	void setCurrentTime(float time);
+	void setCurrentTime(double time);
 
 	// Get the current time of the scrubber.
-	float currentTime() const;
+	double currentTime() const;
 
 signals:
 	// Signal emitted when the current time changes.
-	void currentTimeChanged(float time);
+	void currentTimeChanged(double time);
 
 protected:
 	// Override the paint event to draw the time ruler and scrubber handle.
@@ -69,19 +69,19 @@ protected:
 
 private:
 	// Convert the timeline duration to a pixel value.
-	int timeToPixel(float time) const;
+	int timeToPixel(double time) const;
 
 	// Convert a pixel value to the timeline duration.
-	float pixelToTime(int pixel) const;
+	double pixelToTime(int pixel) const;
 
 	// Helper method to calculate the width of the ruler.
 	int rulerWidth() const;
 
 	// The duration of the animation timeline.
-	float m_Duration;
+	double m_Duration;
 
 	// The current time of the scrubber.
-	float m_CurrentTime;
+	double m_CurrentTime;
 
 	// A flag indicating whether the user is currently dragging the scrubber.
 	bool m_IsDragging;

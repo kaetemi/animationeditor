@@ -48,31 +48,31 @@ AnimationTimeScrubber::~AnimationTimeScrubber()
 {
 }
 
-void AnimationTimeScrubber::setDuration(float duration)
+void AnimationTimeScrubber::setDuration(double duration)
 {
 	m_Duration = duration;
 	update();
 }
 
-void AnimationTimeScrubber::setCurrentTime(float time)
+void AnimationTimeScrubber::setCurrentTime(double time)
 {
 	m_CurrentTime = qBound(0.0f, time, m_Duration);
 	update();
 }
 
-float AnimationTimeScrubber::currentTime() const
+double AnimationTimeScrubber::currentTime() const
 {
 	return m_CurrentTime;
 }
 
-int AnimationTimeScrubber::timeToPixel(float time) const
+int AnimationTimeScrubber::timeToPixel(double time) const
 {
 	return static_cast<int>((time / m_Duration) * rulerWidth());
 }
 
-float AnimationTimeScrubber::pixelToTime(int pixel) const
+double AnimationTimeScrubber::pixelToTime(int pixel) const
 {
-	return (static_cast<float>(pixel) / rulerWidth()) * m_Duration;
+	return (static_cast<double>(pixel) / rulerWidth()) * m_Duration;
 }
 
 int AnimationTimeScrubber::rulerWidth() const
@@ -100,7 +100,7 @@ void AnimationTimeScrubber::mouseMoveEvent(QMouseEvent *event)
 {
 	if (m_IsDragging)
 	{
-		float newTime = pixelToTime(event->pos().x());
+		double newTime = pixelToTime(event->pos().x());
 		setCurrentTime(newTime);
 		emit currentTimeChanged(newTime);
 		event->accept();
