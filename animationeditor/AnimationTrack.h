@@ -35,6 +35,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include "AnimationEditorGlobal.h"
 
+#include <QObject>
 #include <QMap>
 
 class AnimationEditor;
@@ -51,14 +52,8 @@ enum class AnimationInterpolation
 	EaseInOut,
 };
 
-class AnimationKeyframe
+struct AnimationKeyframe
 {
-private:
-	friend AnimationEditor;
-	friend AnimationTimelineEditor;
-	friend AnimationCurveEditor;
-	friend AnimationTrack;
-
 	// Value on Y-axis
 	double Value;
 
@@ -92,8 +87,10 @@ private:
 
 }; /* class AnimationKeyframe */
 
-class AnimationTrack
+class ANIMATIONEDITOR_EXPORT AnimationTrack : QObject
 {
+	Q_OBJECT
+
 private:
 	friend AnimationEditor;
 	friend AnimationTimelineEditor;

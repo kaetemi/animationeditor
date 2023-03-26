@@ -78,13 +78,13 @@ private:
 	int rulerWidth() const;
 
 	// The duration of the animation timeline.
-	float m_duration;
+	float m_Duration;
 
 	// The current time of the scrubber.
-	float m_currentTime;
+	float m_CurrentTime;
 
 	// A flag indicating whether the user is currently dragging the scrubber.
-	bool m_isDragging;
+	bool m_IsDragging;
 }; /* class AnimationEditor */
 
 #endif /* ANIMATION_TIME_SCRUBBER__H */

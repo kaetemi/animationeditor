@@ -36,9 +36,9 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 AnimationTimeScrubber::AnimationTimeScrubber(QWidget *parent)
     : QWidget(parent)
-    , m_duration(0.0f)
-    , m_currentTime(0.0f)
-    , m_isDragging(false)
+    , m_Duration(90.0)
+    , m_CurrentTime(10.0)
+    , m_IsDragging(false)
 {
 	setMinimumHeight(50);
 	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -50,29 +50,29 @@ AnimationTimeScrubber::~AnimationTimeScrubber()
 
 void AnimationTimeScrubber::setDuration(float duration)
 {
-	m_duration = duration;
+	m_Duration = duration;
 	update();
 }
 
 void AnimationTimeScrubber::setCurrentTime(float time)
 {
-	m_currentTime = qBound(0.0f, time, m_duration);
+	m_CurrentTime = qBound(0.0f, time, m_Duration);
 	update();
 }
 
 float AnimationTimeScrubber::currentTime() const
 {
-	return m_currentTime;
+	return m_CurrentTime;
 }
 
 int AnimationTimeScrubber::timeToPixel(float time) const
 {
-	return static_cast<int>((time / m_duration) * rulerWidth());
+	return static_cast<int>((time / m_Duration) * rulerWidth());
 }
 
 float AnimationTimeScrubber::pixelToTime(int pixel) const
 {
-	return (static_cast<float>(pixel) / rulerWidth()) * m_duration;
+	return (static_cast<float>(pixel) / rulerWidth()) * m_Duration;
 }
 
 int AnimationTimeScrubber::rulerWidth() const
@@ -84,13 +84,13 @@ void AnimationTimeScrubber::mousePressEvent(QMouseEvent *event)
 {
 	if (event->button() == Qt::LeftButton)
 	{
-		int scrubberHandlePosition = timeToPixel(m_currentTime);
+		int scrubberHandlePosition = timeToPixel(m_CurrentTime);
 		int clickPosition = event->pos().x();
 
 		// Check if the click is within a threshold of the scrubber handle position
 		if (abs(clickPosition - scrubberHandlePosition) <= 5) // 5 pixels as an example threshold
 		{
-			m_isDragging = true;
+			m_IsDragging = true;
 			event->accept();
 		}
 	}
@@ -98,7 +98,7 @@ void AnimationTimeScrubber::mousePressEvent(QMouseEvent *event)
 
 void AnimationTimeScrubber::mouseMoveEvent(QMouseEvent *event)
 {
-	if (m_isDragging)
+	if (m_IsDragging)
 	{
 		float newTime = pixelToTime(event->pos().x());
 		setCurrentTime(newTime);
@@ -109,9 +109,9 @@ void AnimationTimeScrubber::mouseMoveEvent(QMouseEvent *event)
 
 void AnimationTimeScrubber::mouseReleaseEvent(QMouseEvent *event)
 {
-	if (event->button() == Qt::LeftButton && m_isDragging)
+	if (event->button() == Qt::LeftButton && m_IsDragging)
 	{
-		m_isDragging = false;
+		m_IsDragging = false;
 		event->accept();
 	}
 }
@@ -129,7 +129,7 @@ void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 	painter.fillRect(rect(), Qt::white);
 
 	// Draw the tick marks and labels
-	for (int i = 0; i <= m_duration; ++i)
+	for (int i = 0; i <= m_Duration; ++i)
 	{
 		int x = timeToPixel(i);
 		painter.setPen(Qt::black);
@@ -141,7 +141,7 @@ void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 	}
 
 	// Draw the scrubber handle
-	int handleX = timeToPixel(m_currentTime);
+	int handleX = timeToPixel(m_CurrentTime);
 	int handleHeight = height / 2;
 	QRect handleRect(handleX - 5, height - handleHeight - 1, 10, handleHeight);
 	painter.setPen(Qt::NoPen);
