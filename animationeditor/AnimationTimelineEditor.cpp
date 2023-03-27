@@ -40,6 +40,8 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QTreeWidget>
 #include <QPainterPath>
 #include <QGraphicsDropShadowEffect>
+#include <QMenu>
+#include <QAction>
 
 AnimationTimelineEditor::AnimationTimelineEditor(QWidget *parent)
     : QWidget(parent)
@@ -49,10 +51,73 @@ AnimationTimelineEditor::AnimationTimelineEditor(QWidget *parent)
 	setMouseTracking(true);
 	// setFocusPolicy(Qt::StrongFocus);
 	qApp->installEventFilter(this);
+	createContextMenu();
 }
 
 AnimationTimelineEditor::~AnimationTimelineEditor()
 {
+}
+
+void AnimationTimelineEditor::createContextMenu()
+{
+	m_ContextMenu = new QMenu(this);
+
+	m_RemoveTrackAction = new QAction(tr("Remove Track"), this);
+	connect(m_RemoveTrackAction, &QAction::triggered, this, &AnimationTimelineEditor::removeTrack);
+	m_ContextMenu->addAction(m_RemoveTrackAction);
+
+	m_AddKeyframeAction = new QAction(tr("Add Keyframe"), this);
+	connect(m_AddKeyframeAction, &QAction::triggered, this, &AnimationTimelineEditor::addKeyframe);
+	m_ContextMenu->addAction(m_AddKeyframeAction);
+
+	m_RemoveKeyframeAction = new QAction(tr("Remove Keyframe"), this);
+	connect(m_RemoveKeyframeAction, &QAction::triggered, this, &AnimationTimelineEditor::removeKeyframe);
+	m_ContextMenu->addAction(m_RemoveKeyframeAction);
+}
+
+void AnimationTimelineEditor::contextMenuEvent(QContextMenuEvent *event)
+{
+	if (m_SkipContextMenu)
+	{
+		m_SkipContextMenu = false;
+		return;
+	}
+
+	m_ContextMousePosition = event->pos();
+	m_ContextMenu->exec(event->globalPos());
+}
+
+void AnimationTimelineEditor::removeTrack()
+{
+	QRect rect = rowsRect();
+	QPoint pos = m_ContextMousePosition;
+	AnimationTrack *currentTrack = nullptr;
+	for (AnimationTrack *track : m_AnimationTracks)
+	{
+		QRect trackRect = visualTrackRect(track);
+		trackRect.setY(trackRect.y() + rect.y());
+		trackRect.setLeft(rect.left());
+		trackRect.setRight(rect.right());
+		if (trackRect.contains(pos))
+		{
+			currentTrack = track;
+			break;
+		}
+	}
+	if (currentTrack)
+	{
+		emit trackRemoved(currentTrack);
+	}
+}
+
+void AnimationTimelineEditor::addKeyframe()
+{
+	// Implement your logic to add a keyframe to the current track
+}
+
+void AnimationTimelineEditor::removeKeyframe()
+{
+	// Implement your logic to remove the selected keyframe(s) from the current track
 }
 
 void AnimationTimelineEditor::setAnimationTracks(const QList<AnimationTrack *> &tracks)
@@ -323,6 +388,8 @@ QRect AnimationTimelineEditor::keyframeRect(AnimationTrack *track, double time)
 
 void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 {
+	m_SkipContextMenu = false;
+
 	if (event->button() == Qt::LeftButton)
 	{
 		// Backup all tracks before modifying keyframes
@@ -402,6 +469,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 		if (!m_SelectionStart.isNull())
 		{
 			// Abort rectangle selection on right click
+			m_SkipContextMenu = true;
 			m_SelectedKeyframes.clear();
 			for (int i = 0; i < m_SelectedKeyframesBackup.size(); i++)
 				m_SelectedKeyframes.insert(m_SelectedKeyframesBackup[i]);
@@ -410,6 +478,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 		if (!m_TrackMoveStart.isNull())
 		{
 			// Abort track move on right click
+			m_SkipContextMenu = true;
 			for (int i = 0; i < m_AnimationTracks.size(); ++i)
 			{
 				AnimationTrack *track = m_AnimationTracks[i];

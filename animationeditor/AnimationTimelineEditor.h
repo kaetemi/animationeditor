@@ -44,6 +44,8 @@ This library contains code that was generated using ChatGPT and Copilot.
 class QMouseEvent;
 class QWheelEvent;
 class QTreeWidget;
+class QMenu;
+class QAction;
 
 class ANIMATIONEDITOR_EXPORT AnimationTimelineEditor : public QWidget
 {
@@ -65,6 +67,7 @@ public:
 
 signals:
 	void rangeChanged(double fromTime, double toTime);
+	void trackRemoved(AnimationTrack *track); // Widget doesn't actually remove, editor needs to handle it
 	void trackChanged(AnimationTrack *track);
 	void selectionChanged(const QSet<ptrdiff_t> &selection);
 
@@ -80,8 +83,18 @@ protected:
 	void enterEvent(QEnterEvent *event) override;
 	void leaveEvent(QEvent *event) override;
 	bool eventFilter(QObject *watched, QEvent *event) override;
+	void contextMenuEvent(QContextMenuEvent *event) override;
+
+private slots:
+	// Context menu actions
+	void removeTrack();
+	void addKeyframe();
+	void removeKeyframe();
 
 private:
+	// Create the context menu and actions
+	void createContextMenu();
+
 	// Paint and layout functions
 	QRect keyframeRect(AnimationTrack *track, double time);
 	void paintEditorBackground(QPainter &painter);
@@ -95,6 +108,12 @@ private:
 	// Helper functions
 	int timeToX(double time) const;
 	double xToTime(int x) const;
+
+	// Context menu actions
+	QMenu *m_ContextMenu = nullptr;
+	QAction *m_RemoveTrackAction = nullptr;
+	QAction *m_AddKeyframeAction = nullptr;
+	QAction *m_RemoveKeyframeAction = nullptr;
 
 	// Associated QTreeWidget
 	QTreeWidget *m_TreeWidget = nullptr;
@@ -121,6 +140,8 @@ private:
 	QPoint m_MouseMovePosition;
 	QPoint m_TrackMoveStart;
 	QPoint m_SelectionStart;
+	QPoint m_ContextMousePosition;
+	bool m_SkipContextMenu = false;
 
 	// The duration range of the animation timeline
 	double m_FromTime;
