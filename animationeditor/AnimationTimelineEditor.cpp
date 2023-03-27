@@ -39,6 +39,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QStyleOption>
 #include <QTreeWidget>
 #include <QPainterPath>
+#include <QGraphicsDropShadowEffect>
 
 AnimationTimelineEditor::AnimationTimelineEditor(QWidget *parent)
     : QWidget(parent)
@@ -164,14 +165,35 @@ static QColor lerp(const QColor &color1, const QColor &color2, qreal t)
 
 void AnimationTimelineEditor::paintKeyframe(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active)
 {
-	// Adjust the keyframe size to create a slightly rounded shape
-	QRect adjustedRect = rect.adjusted(2, 2, -2, -2);
+	// Adjust the keyframe size
+	QRect adjustedRect = rect.adjusted(2, 2, 0, 0);
 
 	// Path
-	QPointF top = QPointF((adjustedRect.left() + adjustedRect.right() + 1) / 2, adjustedRect.top());
-	QPointF right = QPointF(adjustedRect.right(), (adjustedRect.top() + adjustedRect.bottom() + 1) / 2);
-	QPointF bottom = QPointF((adjustedRect.left() + adjustedRect.right() + 1) / 2, adjustedRect.bottom());
-	QPointF left = QPointF(adjustedRect.left(), (adjustedRect.top() + adjustedRect.bottom() + 1) / 2);
+	QPointF top = QPointF((adjustedRect.left() + adjustedRect.right()) / 2.0, adjustedRect.top());
+	QPointF right = QPointF(adjustedRect.right(), (adjustedRect.top() + adjustedRect.bottom()) / 2.0);
+	QPointF bottom = QPointF((adjustedRect.left() + adjustedRect.right()) / 2.0, adjustedRect.bottom());
+	QPointF left = QPointF(adjustedRect.left(), (adjustedRect.top() + adjustedRect.bottom()) / 2.0);
+
+	// Adjust the shadow size
+	QRect shadowRect = adjustedRect.adjusted(-2, -2, 2, 2);
+
+	// Shadow path
+	QPointF shadowTop = QPointF((shadowRect.left() + shadowRect.right()) / 2.0, shadowRect.top());
+	QPointF shadowRight = QPointF(shadowRect.right(), (shadowRect.top() + shadowRect.bottom()) / 2.0);
+	QPointF shadowBottom = QPointF((shadowRect.left() + shadowRect.right()) / 2.0, shadowRect.bottom());
+	QPointF shadowLeft = QPointF(shadowRect.left(), (shadowRect.top() + shadowRect.bottom()) / 2.0);
+
+	QColor shadow = palette().color(QPalette::Shadow).darker(300);
+	shadow.setAlpha(128);
+
+	QBrush shadowBrush(shadow);
+
+	QPainterPath shadowPath;
+	shadowPath.moveTo(shadowTop);
+	shadowPath.lineTo(shadowRight);
+	shadowPath.lineTo(shadowBottom);
+	shadowPath.lineTo(shadowLeft);
+	shadowPath.closeSubpath();
 
 	// Create the gradient brush
 	QLinearGradient gradient(top, bottom);
@@ -217,10 +239,12 @@ void AnimationTimelineEditor::paintKeyframe(QPainter &painter, const QRect &rect
 
 	painter.save();
 	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.fillPath(shadowPath, shadowBrush);
 	painter.fillPath(path, brush);
 
 	// Draw the border
-	QPen borderPen(lightColor.lighter(125));
+	QPen borderPen(lightColor.lighter(110));
+	borderPen.setWidthF(1.0);
 
 	painter.setPen(borderPen);
 	painter.drawPath(path);
@@ -294,8 +318,6 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 {
 	if (event->button() == Qt::LeftButton)
 	{
-		m_TrackMoveStart = event->pos();
-
 		// Backup all tracks before modifying keyframes
 		m_OriginalAnimationTracks.clear();
 		for (const AnimationTrack *track : m_AnimationTracks)
@@ -355,11 +377,13 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 			{
 				m_SelectedKeyframes.clear();
 			}
+			m_TrackMoveStart = QPoint();
 			m_SelectionStart = event->pos();
 			emit selectionChanged(m_SelectedKeyframes);
 		}
 		else
 		{
+			m_TrackMoveStart = event->pos();
 			m_SelectionStart = QPoint();
 		}
 	}
@@ -373,6 +397,17 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 			for (int i = 0; i < m_SelectedKeyframesBackup.size(); i++)
 				m_SelectedKeyframes.insert(m_SelectedKeyframesBackup[i]);
 			emit selectionChanged(m_SelectedKeyframes);
+		}
+		if (!m_TrackMoveStart.isNull())
+		{
+			// Abort track move on right click
+			for (int i = 0; i < m_AnimationTracks.size(); ++i)
+			{
+				AnimationTrack *track = m_AnimationTracks[i];
+				QMap<double, AnimationKeyframe> &originalKeyframes = m_OriginalAnimationTracks[i];
+				track->setKeyframes(originalKeyframes);
+				emit trackChanged(track);
+			}
 		}
 	}
 
@@ -415,7 +450,7 @@ void AnimationTimelineEditor::mouseMoveEvent(QMouseEvent *event)
 {
 	m_MouseMovePosition = event->pos();
 
-	if (!m_SelectedKeyframes.isEmpty() && (event->buttons() & Qt::LeftButton) && m_SelectionStart.isNull())
+	if (!m_SelectedKeyframes.isEmpty() && (event->buttons() & Qt::LeftButton) && !m_TrackMoveStart.isNull())
 	{
 		double timeDelta = xToTime(event->pos().x()) - xToTime(m_TrackMoveStart.x());
 
