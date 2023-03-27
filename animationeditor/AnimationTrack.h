@@ -29,6 +29,15 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 */
 
+/*
+
+The AnimationTrack class provides a simple and efficient way to manage and
+manipulate keyframe-based animations. It stores keyframes as a QMap with time
+values as keys and AnimationKeyframe objects as values. It also supports
+multiple interpolation methods for smooth transitions between keyframes.
+
+*/
+
 #pragma once
 #ifndef ANIMATION_TRACK__H
 #define ANIMATION_TRACK__H
@@ -98,8 +107,8 @@ public:
 	explicit AnimationTrack(QObject *parent = nullptr);
 
 	// Getters
-	QMap<double, AnimationKeyframe> getKeyframes() const;
-	AnimationInterpolation getInterpolationMethod() const;
+	QMap<double, AnimationKeyframe> keyframes() const;
+	AnimationInterpolation interpolationMethod() const;
 
 	// Setters
 	void setKeyframes(const QMap<double, AnimationKeyframe> &keyframes);
@@ -108,7 +117,7 @@ public:
 	// Keyframe manipulation
 	void upsertKeyframe(double time, const AnimationKeyframe &keyframe);
 	void removeKeyframe(double time);
-	void moveKeyframe(double time, double toTime);
+	void moveKeyframe(double fromTime, double toTime);
 
 signals:
 	void keyframesChanged();

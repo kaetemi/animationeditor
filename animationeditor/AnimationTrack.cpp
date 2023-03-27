@@ -38,12 +38,12 @@ AnimationTrack::AnimationTrack(QObject *parent)
 {
 }
 
-QMap<double, AnimationKeyframe> AnimationTrack::getKeyframes() const
+QMap<double, AnimationKeyframe> AnimationTrack::keyframes() const
 {
 	return m_Keyframes;
 }
 
-AnimationInterpolation AnimationTrack::getInterpolationMethod() const
+AnimationInterpolation AnimationTrack::interpolationMethod() const
 {
 	return m_InterpolationMethod;
 }
@@ -74,12 +74,12 @@ void AnimationTrack::removeKeyframe(double time)
 	}
 }
 
-void AnimationTrack::moveKeyframe(double time, double toTime)
+void AnimationTrack::moveKeyframe(double fromTime, double toTime)
 {
-	if (m_Keyframes.contains(time))
+	if (m_Keyframes.contains(fromTime))
 	{
-		AnimationKeyframe keyframe = m_Keyframes.value(time);
-		m_Keyframes.remove(time);
+		AnimationKeyframe keyframe = m_Keyframes.value(fromTime);
+		m_Keyframes.remove(fromTime);
 		m_Keyframes.insert(toTime, keyframe);
 		emit keyframesChanged();
 	}

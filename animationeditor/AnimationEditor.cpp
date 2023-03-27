@@ -39,6 +39,28 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include "AnimationCurveEditor.h"
 #include "AnimationTimeScrubber.h"
 
+/*
+ 
+ChatGPT Dump:
+
+- You may want to add icons to the toolbar actions for better visual cues for the users. 
+To do this, you can use QIcon and set it to the actions with QAction::setIcon().
+
+- In the right layout, you've set both the timeline editor and curve editor to be visible at the same time.
+You may want to consider adding a mechanism to switch between the timeline editor
+and curve editor visibility based on user actions or preferences,
+such as using a button or menu action that toggles their visibility.
+
+- If you plan to make the left side of the splitter resizable,
+consider using QSplitter::setCollapsible() to prevent the left side from being completely collapsed.
+
+- Since you're setting the layout for AnimationEditor,
+which inherits from QWidget, you don't need to call setLayout(mainLayout) explicitly.
+Instead, pass this to the QVBoxLayout constructor: QVBoxLayout *mainLayout = new QVBoxLayout(this).
+The layout will automatically be set for the AnimationEditor widget.
+
+*/
+
 AnimationEditor::AnimationEditor(QWidget *parent)
 	: QWidget(parent)
 	, m_ToolBar(new QToolBar(this))
