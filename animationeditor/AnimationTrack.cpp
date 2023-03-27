@@ -31,6 +31,60 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include "AnimationTrack.h"
 
+AnimationTrack::AnimationTrack(QObject *parent)
+    : QObject(parent)
+    , m_Keyframes()
+    , m_InterpolationMethod(AnimationInterpolation::Linear)
+{
+}
+
+QMap<double, AnimationKeyframe> AnimationTrack::getKeyframes() const
+{
+	return m_Keyframes;
+}
+
+AnimationInterpolation AnimationTrack::getInterpolationMethod() const
+{
+	return m_InterpolationMethod;
+}
+
+void AnimationTrack::setKeyframes(const QMap<double, AnimationKeyframe> &keyframes)
+{
+	m_Keyframes = keyframes;
+	emit keyframesChanged();
+}
+
+void AnimationTrack::setInterpolationMethod(AnimationInterpolation interpolationMethod)
+{
+	m_InterpolationMethod = interpolationMethod;
+	emit interpolationMethodChanged();
+}
+
+void AnimationTrack::upsertKeyframe(double time, const AnimationKeyframe &keyframe)
+{
+	m_Keyframes.insert(time, keyframe);
+	emit keyframesChanged();
+}
+
+void AnimationTrack::removeKeyframe(double time)
+{
+	if (m_Keyframes.remove(time) > 0)
+	{
+		emit keyframesChanged();
+	}
+}
+
+void AnimationTrack::moveKeyframe(double time, double toTime)
+{
+	if (m_Keyframes.contains(time))
+	{
+		AnimationKeyframe keyframe = m_Keyframes.value(time);
+		m_Keyframes.remove(time);
+		m_Keyframes.insert(toTime, keyframe);
+		emit keyframesChanged();
+	}
+}
+
 // Bezier to TCB conversion
 void AnimationTrack::convertBezierToTCB(QMap<double, AnimationKeyframe> &keyframes)
 {
@@ -236,20 +290,71 @@ double AnimationTrack::interpolateEaseInOut(double t0, const AnimationKeyframe &
 	return interpolatedValue;
 }
 
+void AnimationTrack::convertInterpolation(QMap<double, AnimationKeyframe> &keyframes, AnimationInterpolation from, AnimationInterpolation to)
+{
+	if (from == to)
+	{
+		return; // No conversion needed
+	}
+
+	// Temporary QMap to store converted keyframes
+	QMap<double, AnimationKeyframe> convertedKeyframes;
+
+	// Convert 'from' interpolation method to Bezier if necessary
+	if (from != AnimationInterpolation::Bezier)
+	{
+		switch (from)
+		{
+		case AnimationInterpolation::TensionContinuityBias:
+			convertTCBToBezier(keyframes);
+			break;
+		case AnimationInterpolation::EaseInOut:
+			convertEaseInOutToBezier(keyframes);
+			break;
+			// Add cases for other interpolation methods if needed
+		default:
+			// Set keyframes to Bezier with linear tangents as a reasonable default
+			for (auto &keyframe : keyframes)
+			{
+				keyframe.Interpolation.Bezier.InTangentX = 1.0;
+				keyframe.Interpolation.Bezier.InTangentY = 0.0;
+				keyframe.Interpolation.Bezier.OutTangentX = 1.0;
+				keyframe.Interpolation.Bezier.OutTangentY = 0.0;
+			}
+			break;
+		}
+	}
+
+	// At this point, all keyframes are in Bezier format
+	// Convert Bezier keyframes to the 'to' interpolation method if necessary
+	if (to != AnimationInterpolation::Bezier)
+	{
+		switch (to)
+		{
+		case AnimationInterpolation::TensionContinuityBias:
+			convertBezierToTCB(keyframes);
+			break;
+		case AnimationInterpolation::EaseInOut:
+			convertBezierToEaseInOut(keyframes);
+			break;
+		}
+	}
+}
+
 /*
 
 # ChatGPT Dump
 
 We have developed a time scrubber for an animation system with support for different interpolation methods, including Bezier, TCB (Tension, Continuity, Bias), and Ease In/Out. The core component of the system is the `AnimationKeyframe` class, which stores keyframe data and interpolation parameters specific to each method. The class uses a union to store these parameters efficiently.
 
-We have implemented functions to convert between the different interpolation methods, enabling seamless transitions and providing flexibility for animators. These functions are: 
-1. `convertBezierToTCB` and `convertTCBToBezier` 
-2. `convertBezierToEaseInOut` and `convertEaseInOutToBezier` 
+We have implemented functions to convert between the different interpolation methods, enabling seamless transitions and providing flexibility for animators. These functions are:
+1. `convertBezierToTCB` and `convertTCBToBezier`
+2. `convertBezierToEaseInOut` and `convertEaseInOutToBezier`
 3. `convertTCBToEaseInOut` and `convertEaseInOutToTCB`
 
-We have also implemented interpolation functions for each method, which calculate the interpolated value given two keyframes and a time value: 
-1. `interpolateBezier` 
-2. `interpolateTCB` 
+We have also implemented interpolation functions for each method, which calculate the interpolated value given two keyframes and a time value:
+1. `interpolateBezier`
+2. `interpolateTCB`
 3. `interpolateEaseInOut`
 
 The system is functional and provides a good foundation for building upon. However, further improvements can be planned and implemented, such as:

@@ -54,6 +54,9 @@ enum class AnimationInterpolation
 
 struct AnimationKeyframe
 {
+	// Identifier for the UI
+	ptrdiff_t Id;
+
 	// Value on Y-axis
 	double Value;
 
@@ -91,13 +94,33 @@ class ANIMATIONEDITOR_EXPORT AnimationTrack : QObject
 {
 	Q_OBJECT
 
+public:
+	explicit AnimationTrack(QObject *parent = nullptr);
+
+	// Getters
+	QMap<double, AnimationKeyframe> getKeyframes() const;
+	AnimationInterpolation getInterpolationMethod() const;
+
+	// Setters
+	void setKeyframes(const QMap<double, AnimationKeyframe> &keyframes);
+	void setInterpolationMethod(AnimationInterpolation interpolationMethod);
+
+	// Keyframe manipulation
+	void upsertKeyframe(double time, const AnimationKeyframe &keyframe);
+	void removeKeyframe(double time);
+	void moveKeyframe(double time, double toTime);
+
+signals:
+	void keyframesChanged();
+	void interpolationMethodChanged();
+
 private:
 	friend AnimationEditor;
 	friend AnimationTimelineEditor;
 	friend AnimationCurveEditor;
 
-	QMap<double, AnimationKeyframe> Keyframes;
-	AnimationInterpolation InterpolationMethod;
+	QMap<double, AnimationKeyframe> m_Keyframes;
+	AnimationInterpolation m_InterpolationMethod;
 
 	static void convertBezierToTCB(QMap<double, AnimationKeyframe> &keyframes);
 	static void convertTCBToBezier(QMap<double, AnimationKeyframe> &keyframes);
@@ -105,6 +128,8 @@ private:
 	static void convertEaseInOutToBezier(QMap<double, AnimationKeyframe> &keyframes);
 	static void convertTCBToEaseInOut(QMap<double, AnimationKeyframe> &keyframes);
 	static void convertEaseInOutToTCB(QMap<double, AnimationKeyframe> &keyframes);
+
+	static void convertInterpolation(QMap<double, AnimationKeyframe> &keyframes, AnimationInterpolation from, AnimationInterpolation to);
 
 	static double interpolateBezier(double t0, const AnimationKeyframe &k0, double t1, const AnimationKeyframe &k1, double t);
 	static double interpolateTCB(double t0, const AnimationKeyframe &k0, double t1, const AnimationKeyframe &k1, double t);
