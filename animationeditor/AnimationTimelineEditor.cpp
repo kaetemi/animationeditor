@@ -43,6 +43,16 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QMenu>
 #include <QAction>
 
+AnimationContextMenu::AnimationContextMenu(QWidget *parent) : QMenu(parent)
+{
+}
+
+void AnimationContextMenu::hideEvent(QHideEvent *event)
+{
+	QMenu::hideEvent(event);
+	emit menuClosed();
+}
+
 AnimationTimelineEditor::AnimationTimelineEditor(QWidget *parent)
     : QWidget(parent)
     , m_FromTime(0.0)
@@ -60,7 +70,10 @@ AnimationTimelineEditor::~AnimationTimelineEditor()
 
 void AnimationTimelineEditor::createContextMenu()
 {
-	m_ContextMenu = new QMenu(this);
+	AnimationContextMenu *contextMenu = new AnimationContextMenu(this);
+	connect(contextMenu, &AnimationContextMenu::menuClosed, this, &AnimationTimelineEditor::onContextMenuClosed);
+
+	m_ContextMenu = contextMenu;
 
 	m_RemoveTrackAction = new QAction(tr("Remove Track"), this);
 	connect(m_RemoveTrackAction, &QAction::triggered, this, &AnimationTimelineEditor::removeTrack);
@@ -83,30 +96,35 @@ void AnimationTimelineEditor::contextMenuEvent(QContextMenuEvent *event)
 		return;
 	}
 
+	if (m_ContextMenuTrack)
+	{
+		QRect rect = rowsRect();
+		QPoint pos = event->pos();
+		QRect trackRect = visualTrackRect(m_ContextMenuTrack);
+		trackRect.setY(trackRect.y() + rect.y());
+		trackRect.setLeft(rect.left());
+		trackRect.setRight(rect.right());
+		if (!trackRect.contains(pos))
+		{
+			return;
+		}
+	}
+
 	m_ContextMousePosition = event->pos();
 	m_ContextMenu->exec(event->globalPos());
 }
 
+void AnimationTimelineEditor::onContextMenuClosed()
+{
+	m_ContextMenuTrack = nullptr;
+	update();
+}
+
 void AnimationTimelineEditor::removeTrack()
 {
-	QRect rect = rowsRect();
-	QPoint pos = m_ContextMousePosition;
-	AnimationTrack *currentTrack = nullptr;
-	for (AnimationTrack *track : m_AnimationTracks)
+	if (m_ContextMenuTrack)
 	{
-		QRect trackRect = visualTrackRect(track);
-		trackRect.setY(trackRect.y() + rect.y());
-		trackRect.setLeft(rect.left());
-		trackRect.setRight(rect.right());
-		if (trackRect.contains(pos))
-		{
-			currentTrack = track;
-			break;
-		}
-	}
-	if (currentTrack)
-	{
-		emit trackRemoved(currentTrack);
+		emit trackRemoved(m_ContextMenuTrack);
 	}
 }
 
@@ -338,7 +356,9 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 
 		// Draw the track background
 		QBrush trackBackgroundBrush = palette().brush(QPalette::AlternateBase);
-		if (track == m_HoverTrack)
+		if (track == m_ContextMenuTrack && track == m_HoverTrack)
+			trackBackgroundBrush = palette().brush(QPalette::Highlight);
+		else if (track == m_HoverTrack)
 			trackBackgroundBrush.setColor(trackBackgroundBrush.color().lighter(110));
 		else if (i & 1)
 			trackBackgroundBrush.setColor(trackBackgroundBrush.color().lighter(105));
@@ -466,6 +486,26 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 
 	if (event->button() == Qt::RightButton)
 	{
+		if (m_SelectionStart.isNull() && m_TrackMoveStart.isNull())
+		{
+			QRect rect = rowsRect();
+			QPoint pos = event->pos();
+			AnimationTrack *currentTrack = nullptr;
+			for (AnimationTrack *track : m_AnimationTracks)
+			{
+				QRect trackRect = visualTrackRect(track);
+				trackRect.setY(trackRect.y() + rect.y());
+				trackRect.setLeft(rect.left());
+				trackRect.setRight(rect.right());
+				if (trackRect.contains(pos))
+				{
+					currentTrack = track;
+					break;
+				}
+			}
+			m_ContextMenuTrack = currentTrack;
+		}
+
 		if (!m_SelectionStart.isNull())
 		{
 			// Abort rectangle selection on right click

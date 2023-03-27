@@ -38,6 +38,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QWidget>
 #include <QList>
 #include <QSet>
+#include <QMenu>
 
 #include "AnimationTrack.h"
 
@@ -46,6 +47,20 @@ class QWheelEvent;
 class QTreeWidget;
 class QMenu;
 class QAction;
+
+class ANIMATIONEDITOR_EXPORT AnimationContextMenu : public QMenu
+{
+	Q_OBJECT
+
+public:
+	explicit AnimationContextMenu(QWidget *parent = nullptr);
+
+signals:
+	void menuClosed();
+
+protected:
+	void hideEvent(QHideEvent *event) override;
+};
 
 class ANIMATIONEDITOR_EXPORT AnimationTimelineEditor : public QWidget
 {
@@ -90,6 +105,7 @@ private slots:
 	void removeTrack();
 	void addKeyframe();
 	void removeKeyframe();
+	void onContextMenuClosed();
 
 private:
 	// Create the context menu and actions
@@ -132,6 +148,7 @@ private:
 	ptrdiff_t m_HoverKeyframe;
 	ptrdiff_t m_PressedKeyframe;
 	AnimationTrack *m_HoverTrack = nullptr;
+	AnimationTrack *m_ContextMenuTrack = nullptr;
 
 	// Mouse hover state
 	bool m_MouseHover = false;
