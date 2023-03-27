@@ -36,15 +36,45 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include "AnimationEditorGlobal.h"
 
 #include <QWidget>
+#include <QList>
+#include <QSet>
+#include <QPointer>
+
+#include "AnimationTrack.h"
 
 class ANIMATIONEDITOR_EXPORT AnimationTimelineEditor : public QWidget
 {
 	Q_OBJECT
 
 public:
-	AnimationTimelineEditor(QWidget *parent);
+	explicit AnimationTimelineEditor(QWidget *parent = nullptr);
 	virtual ~AnimationTimelineEditor();
-	
+
+	/*
+	// Set and get the animation tracks
+	void setAnimationTracks(const QList<QPointer<AnimationTrack>> &tracks);
+	QList<QPointer<AnimationTrack>> animationTracks() const;
+
+	// Set and get the keyframe selection
+	void setKeyframeSelection(const QSet<ptrdiff_t> &selection);
+	QSet<ptrdiff_t> keyframeSelection() const;
+
+signals:
+	void animationTrackChanged(AnimationTrack *track);
+	void keyframeSelectionChanged();
+
+protected:
+	// Override paintEvent to customize drawing
+	// void paintEvent(QPaintEvent *event) override;
+
+private:
+	QList<QPointer<AnimationTrack>> m_AnimationTracks;
+	QList<QPointer<AnimationTrack>> m_OriginalAnimationTracks;
+	QSet<ptrdiff_t> m_KeyframeSelection;
+
+	void updateOriginalAnimationTracks();
+	*/
+
 }; /* class AnimationTimelineEditor */
 
 #endif /* ANIMATION_TIMELINE_EDITOR__H */
