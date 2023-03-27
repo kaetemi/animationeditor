@@ -79,27 +79,35 @@ protected:
 	void wheelEvent(QWheelEvent *event) override;
 	void enterEvent(QEnterEvent *event) override;
 	void leaveEvent(QEvent *event) override;
+	bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+	QTreeWidget *m_TreeWidget = nullptr;
 	QList<AnimationTrack *> m_AnimationTracks;
+
 	QList<QMap<double, AnimationKeyframe>> m_OriginalAnimationTracks;
 	QSet<ptrdiff_t> m_SelectedKeyframes;
+	QList<ptrdiff_t> m_SelectedKeyframesBackup;
 	ptrdiff_t m_HoverKeyframe;
+
 	bool m_MouseHover = false;
-	QPoint m_MousePressPosition;
-	QTreeWidget *m_TreeWidget = nullptr;
+	QPoint m_MouseMovePosition;
+	QPoint m_TrackMoveStart;
+	QPoint m_SelectionStart;
 
 	// The duration range of the animation timeline
 	double m_FromTime;
 	double m_ToTime;
 
 private:
-	// Paint functions
+	// Paint and layout functions
+	QRect keyframeRect(AnimationTrack *track, double time);
 	void paintEditorBackground(QPainter &painter);
 	QRect rowsRect();
 
 	// Mouse updates
 	void updateMouseHover(const QPoint &pos);
+	void updateMouseSelection(bool ctrlHeld);
 
 	// Helper function to calculate the X position for a given time
 	int timeToX(double time) const;

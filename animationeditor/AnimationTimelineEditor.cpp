@@ -31,6 +31,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include "AnimationTimelineEditor.h"
 
+#include <QApplication>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QMouseEvent>
@@ -44,6 +45,8 @@ AnimationTimelineEditor::AnimationTimelineEditor(QWidget *parent)
     , m_ToTime(10.0)
 {
 	setMouseTracking(true);
+	// setFocusPolicy(Qt::StrongFocus);
+	qApp->installEventFilter(this);
 }
 
 AnimationTimelineEditor::~AnimationTimelineEditor()
@@ -184,14 +187,35 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 			painter.fillRect(keyframeRect, brush);
 		}
 	}
+
+	if (!m_SelectionStart.isNull())
+	{
+		QRect selectionRect = QRect(m_SelectionStart, m_MouseMovePosition).normalized();
+		QStyleOptionRubberBand rubberBandOption;
+		rubberBandOption.initFrom(this);
+		rubberBandOption.rect = selectionRect;
+		style()->drawControl(QStyle::CE_RubberBand, &rubberBandOption, &painter, this);
+	}
+}
+
+QRect AnimationTimelineEditor::keyframeRect(AnimationTrack *track, double time)
+{
+	QRect rect = rowsRect();
+	QRect trackRect = visualTrackRect(track);
+	trackRect.setY(trackRect.y() + rect.y());
+	trackRect.setLeft(rect.left());
+	trackRect.setRight(rect.right());
+	int keyframeX = timeToX(time);
+	int centerY = trackRect.y() + (trackRect.height() - 8) / 2;
+	QRect keyframeRect(keyframeX - 4, centerY, 8, 8);
+	return keyframeRect;
 }
 
 void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 {
 	if (event->button() == Qt::LeftButton)
 	{
-		m_MousePressPosition = event->pos();
-		QRect rect = rowsRect();
+		m_TrackMoveStart = event->pos();
 
 		// Backup all tracks before modifying keyframes
 		m_OriginalAnimationTracks.clear();
@@ -201,20 +225,17 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 		}
 
 		bool ctrlHeld = event->modifiers() & Qt::ControlModifier;
+		bool clickedKeyframe = false;
 
 		// Find the clicked keyframe
 		for (AnimationTrack *track : m_AnimationTracks)
 		{
 			QRect trackRect = visualTrackRect(track);
-			trackRect.setY(trackRect.y() + rect.y());
-			trackRect.setLeft(rect.left());
-			trackRect.setRight(rect.right());
 			if (trackRect.contains(event->pos()))
 			{
 				for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 				{
-					int keyframeX = timeToX(keyframe.key());
-					QRect keyframeRect(keyframeX - 4, trackRect.y() + (trackRect.height() - 8) / 2, 8, 8);
+					QRect keyframeRect = this->keyframeRect(track, keyframe.key());
 					if (keyframeRect.contains(event->pos()))
 					{
 						if (ctrlHeld)
@@ -239,22 +260,84 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 							}
 						}
 						m_HoverKeyframe = -1;
+						clickedKeyframe = true;
 						emit selectionChanged(m_SelectedKeyframes);
 						break;
 					}
 				}
 			}
 		}
+
+		if (!clickedKeyframe)
+		{
+			m_SelectedKeyframesBackup = QList<ptrdiff_t>(m_SelectedKeyframes.begin(), m_SelectedKeyframes.end());
+			if (!ctrlHeld)
+			{
+				m_SelectedKeyframes.clear();
+			}
+			m_SelectionStart = event->pos();
+			emit selectionChanged(m_SelectedKeyframes);
+		}
+		else
+		{
+			m_SelectionStart = QPoint();
+		}
+	}
+
+	if (event->button() == Qt::RightButton)
+	{
+		if (!m_SelectionStart.isNull())
+		{
+			// Abort rectangle selection on right click
+			m_SelectedKeyframes.clear();
+			for (int i = 0; i < m_SelectedKeyframesBackup.size(); i++)
+				m_SelectedKeyframes.insert(m_SelectedKeyframesBackup[i]);
+			emit selectionChanged(m_SelectedKeyframes);
+		}
 	}
 
 	update();
 }
 
+void AnimationTimelineEditor::updateMouseSelection(bool ctrlHeld)
+{
+	if (!m_SelectionStart.isNull())
+	{
+		QRect selectionRect = QRect(m_SelectionStart, m_MouseMovePosition).normalized();
+		QSet<ptrdiff_t> newSelectedKeyframes;
+
+		for (AnimationTrack *track : m_AnimationTracks)
+		{
+			QRect trackRect = visualTrackRect(track);
+			for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
+			{
+				QRect keyframeRect = this->keyframeRect(track, keyframe.key());
+				if (selectionRect.intersects(keyframeRect))
+				{
+					newSelectedKeyframes.insert(keyframe.value().Id);
+				}
+			}
+		}
+
+		m_SelectedKeyframes = newSelectedKeyframes;
+		if (ctrlHeld)
+		{
+			for (int i = 0; i < m_SelectedKeyframesBackup.size(); i++)
+				m_SelectedKeyframes.insert(m_SelectedKeyframesBackup[i]);
+		}
+
+		emit selectionChanged(m_SelectedKeyframes);
+		update();
+	}
+}
+
 void AnimationTimelineEditor::mouseMoveEvent(QMouseEvent *event)
 {
-	if (!m_SelectedKeyframes.isEmpty() && event->buttons() & Qt::LeftButton)
+	m_MouseMovePosition = event->pos();
+
+	if (!m_SelectedKeyframes.isEmpty() && (event->buttons() & Qt::LeftButton) && m_SelectionStart.isNull())
 	{
-		double timeDelta = xToTime(event->pos().x()) - xToTime(m_MousePressPosition.x());
+		double timeDelta = xToTime(event->pos().x()) - xToTime(m_TrackMoveStart.x());
 
 		for (int i = 0; i < m_AnimationTracks.size(); ++i)
 		{
@@ -284,6 +367,12 @@ void AnimationTimelineEditor::mouseMoveEvent(QMouseEvent *event)
 	else if (m_MouseHover)
 	{
 		updateMouseHover(event->pos());
+	}
+
+	if (event->buttons() & Qt::LeftButton)
+	{
+		bool ctrlHeld = event->modifiers() & Qt::ControlModifier;
+		updateMouseSelection(ctrlHeld);
 	}
 }
 
@@ -334,9 +423,11 @@ void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 void AnimationTimelineEditor::mouseReleaseEvent(QMouseEvent *event)
 {
 	Q_UNUSED(event);
-	m_MousePressPosition = QPoint();
+	m_TrackMoveStart = QPoint();
+	m_SelectionStart = QPoint();
 	m_OriginalAnimationTracks.clear();
 	updateMouseHover(event->pos());
+	update();
 }
 
 void AnimationTimelineEditor::wheelEvent(QWheelEvent *event)
@@ -354,6 +445,30 @@ void AnimationTimelineEditor::wheelEvent(QWheelEvent *event)
 	{
 		QWidget::wheelEvent(event); // Pass the event to the base class for default behavior
 	}
+}
+
+bool AnimationTimelineEditor::eventFilter(QObject *watched, QEvent *event)
+{
+	if (!m_SelectionStart.isNull())
+	{
+		if (event->type() == QEvent::KeyPress)
+		{
+			QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+			if (keyEvent->key() == Qt::Key_Control)
+			{
+				updateMouseSelection(true);
+			}
+		}
+		else if (event->type() == QEvent::KeyRelease)
+		{
+			QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+			if (keyEvent->key() == Qt::Key_Control)
+			{
+				updateMouseSelection(false);
+			}
+		}
+	}
+	return QWidget::eventFilter(watched, event);
 }
 
 /*
