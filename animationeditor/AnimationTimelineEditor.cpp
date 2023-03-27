@@ -108,6 +108,31 @@ void AnimationTimelineEditor::contextMenuEvent(QContextMenuEvent *event)
 		{
 			return;
 		}
+		bool ctrlHeld = event->modifiers() & Qt::ControlModifier;
+		for (QMap<double, AnimationKeyframe>::const_iterator keyframe = m_ContextMenuTrack->keyframes().begin(); keyframe != m_ContextMenuTrack->keyframes().end(); ++keyframe)
+		{
+			QRect keyframeRect = this->keyframeRect(m_ContextMenuTrack, keyframe.key());
+			if (keyframeRect.contains(event->pos()))
+			{
+				if (ctrlHeld)
+				{
+					// Add the keyframe to the selection
+					m_SelectedKeyframes.insert(keyframe.value().Id);
+				}
+				else
+				{
+					// If the keyframe is not already selected, clear the selection and select the new keyframe
+					if (!m_SelectedKeyframes.contains(keyframe.value().Id))
+					{
+						m_SelectedKeyframes = { keyframe.value().Id };
+					}
+				}
+				m_HoverKeyframe = -1;
+				m_HoverTrack = nullptr;
+				emit selectionChanged(m_SelectedKeyframes);
+				break;
+			}
+		}
 	}
 
 	m_ContextMenuOpen = true;
@@ -379,7 +404,7 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 			QRect keyframeRect = this->keyframeRect(track, keyframe.key());
 			bool isSelected = m_SelectedKeyframes.contains(keyframe.value().Id);
 			bool isHovered = (keyframe.value().Id == m_HoverKeyframe);
-			bool isPressed = (keyframe.value().Id == m_PressedKeyframe);
+			bool isPressed = (keyframe.value().Id == m_PressedKeyframe) || ((keyframe.value().Id == m_CurrentHoverKeyframe) && keyframe.value().Id == m_RightPressedKeyframe);
 			paintKeyframe(painter, keyframeRect, isSelected, isHovered, isPressed);
 		}
 	}
@@ -494,6 +519,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 			QRect rect = rowsRect();
 			QPoint pos = event->pos();
 			AnimationTrack *currentTrack = nullptr;
+			ptrdiff_t currentKeyframe = -1;
 			for (AnimationTrack *track : m_AnimationTracks)
 			{
 				QRect trackRect = visualTrackRect(track);
@@ -503,10 +529,22 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 				if (trackRect.contains(pos))
 				{
 					currentTrack = track;
+					for (QMap<double, AnimationKeyframe>::const_iterator keyframe = currentTrack->keyframes().begin(); keyframe != currentTrack->keyframes().end(); ++keyframe)
+					{
+						QRect keyframeRect = this->keyframeRect(currentTrack, keyframe.key());
+						if (keyframeRect.contains(event->pos()))
+						{
+							currentKeyframe = keyframe.value().Id;
+							break;
+						}
+					}
 					break;
 				}
 			}
+			m_RightPressedKeyframe = currentKeyframe;
+			m_CurrentHoverKeyframe = currentKeyframe;
 			m_ContextMenuTrack = currentTrack;
+			m_CurrentHoverTrack = currentTrack;
 		}
 
 		if (!m_SelectionStart.isNull())
@@ -658,6 +696,7 @@ void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 	if (m_HoverKeyframe != hoverKeyframe || (m_SelectionStart.isNull() && m_HoverTrack != hoverTrack))
 	{
 		m_HoverKeyframe = hoverKeyframe;
+		m_CurrentHoverKeyframe = hoverKeyframe;
 		if (m_SelectionStart.isNull())
 		{
 			m_HoverTrack = hoverTrack;
@@ -673,6 +712,7 @@ void AnimationTimelineEditor::mouseReleaseEvent(QMouseEvent *event)
 	m_SelectionStart = QPoint();
 	m_TrackMoveStart = QPoint();
 	m_PressedKeyframe = -1;
+	m_RightPressedKeyframe = -1;
 	m_OriginalAnimationTracks.clear();
 	// updateMouseHover(event->pos());
 	mouseMoveEvent(event);

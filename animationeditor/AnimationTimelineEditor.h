@@ -146,7 +146,9 @@ private:
 
 	// Hover and pressed keyframe and track
 	ptrdiff_t m_HoverKeyframe;
+	ptrdiff_t m_CurrentHoverKeyframe;
 	ptrdiff_t m_PressedKeyframe;
+	ptrdiff_t m_RightPressedKeyframe;
 	AnimationTrack *m_HoverTrack = nullptr;
 	AnimationTrack *m_CurrentHoverTrack = nullptr;
 	AnimationTrack *m_ContextMenuTrack = nullptr;
