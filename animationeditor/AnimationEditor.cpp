@@ -35,6 +35,9 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QHBoxLayout>
 #include <QSplitter>
 
+#include <QToolBar>
+#include <QTreeWidget>
+
 #include "AnimationTimelineEditor.h"
 #include "AnimationCurveEditor.h"
 #include "AnimationTimeScrubber.h"
@@ -65,7 +68,7 @@ AnimationEditor::AnimationEditor(QWidget *parent)
     : QWidget(parent)
     , m_ToolBar(new QToolBar(this))
     , m_TrackTreeToolBar(new QToolBar(this))
-    , m_TrackTreeView(new QTreeView(this))
+    , m_TrackTreeWidget(new QTreeWidget(this))
     , m_TimelineEditor(new AnimationTimelineEditor(this))
     , m_CurveEditor(new AnimationCurveEditor(this))
     , m_TimeScrubber(new AnimationTimeScrubber(this))
@@ -99,7 +102,7 @@ AnimationEditor::AnimationEditor(QWidget *parent)
 	// leftLayout->setMargin(0);
 	// leftLayout->setSpacing(0);
 	leftLayout->addWidget(m_TrackTreeToolBar);
-	leftLayout->addWidget(m_TrackTreeView);
+	leftLayout->addWidget(m_TrackTreeWidget);
 	leftWidget->setLayout(leftLayout);
 	splitter->addWidget(leftWidget);
 
@@ -128,46 +131,76 @@ AnimationEditor::AnimationEditor(QWidget *parent)
 
 	// Set up the main layout
 	setLayout(mainLayout);
+
+	// Set up the tree widget
+	m_RootNode.TreeWidgetItem = m_TrackTreeWidget->invisibleRootItem();
 }
 
 AnimationEditor::~AnimationEditor()
 {
+	// Clean up the root node and its children
+	deleteNodeAndChildren(&m_RootNode);
 }
 
 AnimationNode *AnimationEditor::addNode(AnimationNode *parentNode)
 {
-	AnimationNode *newNode = new AnimationNode;
-	if (parentNode == nullptr) parentNode = &m_RootNode;
+	AnimationNode *newNode = new AnimationNode();
+	newNode->TreeWidgetItem = new QTreeWidgetItem(m_TrackTreeWidget);
+	newNode->TreeWidgetItem->setText(0, "Node Name");
+
+	if (parentNode == nullptr)
+		parentNode = &m_RootNode;
+
 	parentNode->Nodes.append(newNode);
-	// Update the UI, e.g., TreeView
+	parentNode->TreeWidgetItem->addChild(newNode->TreeWidgetItem);
+
+	m_TrackTreeWidget->expandItem(parentNode->TreeWidgetItem);
+
 	return newNode;
+}
+
+void AnimationEditor::removeNode(AnimationNode *node)
+{
+	AnimationNode *parentNode = findParentNode(&m_RootNode, node);
+
+	if (parentNode != nullptr)
+	{
+		parentNode->Nodes.removeOne(node);
+		parentNode->TreeWidgetItem->removeChild(node->TreeWidgetItem);
+	}
+
+	deleteNodeAndChildren(node);
 }
 
 AnimationTrack *AnimationEditor::addTrack(AnimationNode *node)
 {
 	AnimationTrack *newTrack = new AnimationTrack(this);
-	if (node == nullptr) node = &m_RootNode;
+	newTrack->m_TreeWidgetItem = new QTreeWidgetItem(m_TrackTreeWidget);
+	newTrack->m_TreeWidgetItem->setText(0, "Track Name");
+
+	if (node == nullptr)
+		node = &m_RootNode;
+
 	node->Tracks.append(newTrack);
-	// Update the UI, e.g., TreeView
+	node->TreeWidgetItem->addChild(newTrack->m_TreeWidgetItem);
+
+	m_TrackTreeWidget->expandItem(node->TreeWidgetItem);
+
 	return newTrack;
-}
-
-void AnimationEditor::removeNode(AnimationNode* node)
-{
-	// Find the parent node
-	AnimationNode* parentNode = findParentNode(&m_RootNode, node);
-	if (parentNode != nullptr) parentNode->Nodes.removeOne(node);
-
-	// Recursively delete child nodes and tracks
-	deleteNodeAndChildren(node);
-
-	// Update the UI, e.g., TreeView
 }
 
 void AnimationEditor::removeTrack(AnimationTrack *track)
 {
-	removeTrackFromNode(&m_RootNode, track);
-	// Update the UI, e.g., TreeView
+	AnimationNode *parentNode = findParentNodeWithTrack(&m_RootNode, track);
+
+	if (parentNode != nullptr)
+	{
+		parentNode->Tracks.removeOne(track);
+		parentNode->TreeWidgetItem->removeChild(track->m_TreeWidgetItem);
+	}
+
+	delete track->m_TreeWidgetItem;
+	delete track;
 }
 
 AnimationNode *AnimationEditor::findParentNode(AnimationNode *rootNode, AnimationNode *targetNode)
@@ -181,26 +214,47 @@ AnimationNode *AnimationEditor::findParentNode(AnimationNode *rootNode, Animatio
 	return nullptr;
 }
 
-void AnimationEditor::removeTrackFromNode(AnimationNode *node, AnimationTrack *track)
+AnimationNode *AnimationEditor::findParentNodeWithTrack(AnimationNode *startNode, AnimationTrack *track)
 {
-	if (node->Tracks.removeOne(track))
+	if (startNode->Tracks.contains(track))
 	{
-		delete track;
-		return;
+		return startNode;
 	}
 
-	for (AnimationNode *childNode : node->Nodes)
+	for (AnimationNode *childNode : startNode->Nodes)
 	{
-		removeTrackFromNode(childNode, track);
+		AnimationNode *parentNode = findParentNodeWithTrack(childNode, track);
+		if (parentNode != nullptr)
+		{
+			return parentNode;
+		}
 	}
+
+	return nullptr;
 }
 
-void AnimationEditor::deleteNodeAndChildren(AnimationNode* node)
+/*
+void AnimationEditor::removeTrackFromNode(AnimationNode *node, AnimationTrack *track)
+{
+    if (node->Tracks.removeOne(track))
+    {
+        delete track;
+        return;
+    }
+
+    for (AnimationNode *childNode : node->Nodes)
+    {
+        removeTrackFromNode(childNode, track);
+    }
+}
+*/
+
+void AnimationEditor::deleteNodeAndChildren(AnimationNode *node)
 {
 	// Recursively delete child nodes
 	while (!node->Nodes.isEmpty())
 	{
-		AnimationNode* childNode = node->Nodes.takeLast();
+		AnimationNode *childNode = node->Nodes.takeLast();
 		deleteNodeAndChildren(childNode);
 	}
 
@@ -209,7 +263,31 @@ void AnimationEditor::deleteNodeAndChildren(AnimationNode* node)
 	node->Tracks.clear();
 
 	// Delete the node itself
-	delete node;
+	if (node != &m_RootNode)
+		delete node;
 }
+
+/*
+
+ChatGPT Dump:
+
+The current implementation allows developers to add and remove nodes and tracks,
+as well as modify keyframe properties using different interpolation methods.
+However, there are some areas that may require further improvements or enhancements:
+
+- User Interface: The UI design can be refined and polished to improve the
+user experience and to better align with the overall look and feel of the target application.
+
+- Undo/Redo functionality: To provide a more robust editing experience,
+implementing an undo/redo system would be beneficial.
+
+- Integration with external data formats: Support for importing and exporting
+animation data to and from various file formats could be added to facilitate
+integration with other tools.
+
+- Performance optimizations: Depending on the use case, performance optimizations
+may be required to handle large animation datasets more efficiently.
+
+*/
 
 /* end of file */

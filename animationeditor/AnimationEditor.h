@@ -36,19 +36,25 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include "AnimationEditorGlobal.h"
 
 #include <QWidget>
-#include <QToolBar>
-#include <QTreeView>
 
 #include "AnimationTrack.h"
+
+class QToolBar;
+class QTreeWidget;
+class QTreeWidgetItem;
 
 class AnimationTimelineEditor;
 class AnimationCurveEditor;
 class AnimationTimeScrubber;
+class AnimationEditor;
 
 struct AnimationNode
 {
+private:
+	friend AnimationEditor;
 	QList<AnimationNode *> Nodes;
 	QList<AnimationTrack *> Tracks;
+	QTreeWidgetItem *TreeWidgetItem;
 };
 
 class ANIMATIONEDITOR_EXPORT AnimationEditor : public QWidget
@@ -68,7 +74,7 @@ public:
 private:
 	QToolBar *m_ToolBar;
 	QToolBar *m_TrackTreeToolBar;
-	QTreeView *m_TrackTreeView;
+	QTreeWidget *m_TrackTreeWidget;
 	AnimationTimelineEditor *m_TimelineEditor;
 	AnimationCurveEditor *m_CurveEditor;
 	AnimationTimeScrubber *m_TimeScrubber;
@@ -78,8 +84,9 @@ private:
 private:
 	// Helper functions
 	AnimationNode *findParentNode(AnimationNode *rootNode, AnimationNode *targetNode);
-	void removeTrackFromNode(AnimationNode *node, AnimationTrack *track);
-	void deleteNodeAndChildren(AnimationNode* node);
+	AnimationNode *findParentNodeWithTrack(AnimationNode *startNode, AnimationTrack *track);
+	// void removeTrackFromNode(AnimationNode *node, AnimationTrack *track);
+	void deleteNodeAndChildren(AnimationNode *node);
 
 }; /* class AnimationEditor */
 

@@ -49,6 +49,8 @@ multiple interpolation methods for smooth transitions between keyframes.
 
 #include <atomic>
 
+class QTreeWidgetItem;
+
 class AnimationEditor;
 class AnimationTimelineEditor;
 class AnimationCurveEditor;
@@ -63,7 +65,7 @@ enum class AnimationInterpolation
 	EaseInOut,
 };
 
-struct AnimationKeyframe
+struct ANIMATIONEDITOR_EXPORT AnimationKeyframe
 {
 	// Identifier for the UI
 	ptrdiff_t Id;
@@ -101,8 +103,8 @@ struct AnimationKeyframe
 
 	// Constructor for Linear interpolation
 	AnimationKeyframe()
-		: Id(s_NextId)
-		, Value(0.0)
+	    : Id(s_NextId)
+	    , Value(0.0)
 	{
 		Interpolation.Bezier.InTangentX = 0.0;
 		Interpolation.Bezier.InTangentY = 0.0;
@@ -112,15 +114,19 @@ struct AnimationKeyframe
 
 	// Constructor for Linear interpolation
 	AnimationKeyframe(double value)
-		: Id(s_NextId++)
-		, Value(value)
+	    : Id(s_NextId++)
+	    , Value(value)
 	{
+		Interpolation.Bezier.InTangentX = 0.0;
+		Interpolation.Bezier.InTangentY = 0.0;
+		Interpolation.Bezier.OutTangentX = 0.0;
+		Interpolation.Bezier.OutTangentY = 0.0;
 	}
 
 	// Constructor for Bezier interpolation
 	AnimationKeyframe(double value, double inTangentX, double inTangentY, double outTangentX, double outTangentY)
-		: Id(s_NextId++)
-		, Value(value)
+	    : Id(s_NextId++)
+	    , Value(value)
 	{
 		Interpolation.Bezier.InTangentX = inTangentX;
 		Interpolation.Bezier.InTangentY = inTangentY;
@@ -130,9 +136,10 @@ struct AnimationKeyframe
 
 	// Constructor for TCB interpolation
 	AnimationKeyframe(double value, double tension, double continuity, double bias)
-		: Id(s_NextId++)
-		, Value(value)
+	    : Id(s_NextId++)
+	    , Value(value)
 	{
+		Interpolation.Bezier.OutTangentY = 0.0;
 		Interpolation.TCB.Tension = tension;
 		Interpolation.TCB.Continuity = continuity;
 		Interpolation.TCB.Bias = bias;
@@ -140,9 +147,11 @@ struct AnimationKeyframe
 
 	// Constructor for Ease In/Out interpolation
 	AnimationKeyframe(double value, double easeIn, double easeOut)
-		: Id(s_NextId++)
-		, Value(value)
+	    : Id(s_NextId++)
+	    , Value(value)
 	{
+		Interpolation.Bezier.OutTangentX = 0.0;
+		Interpolation.Bezier.OutTangentY = 0.0;
 		Interpolation.EaseInOut.EaseIn = easeIn;
 		Interpolation.EaseInOut.EaseOut = easeOut;
 	}
@@ -185,6 +194,7 @@ private:
 
 	QMap<double, AnimationKeyframe> m_Keyframes;
 	AnimationInterpolation m_InterpolationMethod;
+	QTreeWidgetItem *m_TreeWidgetItem;
 
 	static void convertBezierToTCB(QMap<double, AnimationKeyframe> &keyframes);
 	static void convertTCBToBezier(QMap<double, AnimationKeyframe> &keyframes);
