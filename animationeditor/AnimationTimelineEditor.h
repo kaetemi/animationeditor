@@ -85,7 +85,7 @@ private:
 	// Paint and layout functions
 	QRect keyframeRect(AnimationTrack *track, double time);
 	void paintEditorBackground(QPainter &painter);
-	void paintKeyframe(QPainter &painter, const QRect &keyframeRect, bool isSelected, bool isHovered, bool isClicked);
+	void paintKeyframe(QPainter &painter, const QRect &keyframeRect, bool isSelected, bool isHovered, bool isPressed);
 	QRect rowsRect();
 
 	// Mouse updates
@@ -109,8 +109,9 @@ private:
 	QSet<ptrdiff_t> m_SelectedKeyframes;
 	QList<ptrdiff_t> m_SelectedKeyframesBackup;
 
-	// Hover keyframe
+	// Hover and pressed keyframe
 	ptrdiff_t m_HoverKeyframe;
+	ptrdiff_t m_PressedKeyframe;
 
 	// Mouse hover state
 	bool m_MouseHover = false;

@@ -38,6 +38,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QWheelEvent>
 #include <QStyleOption>
 #include <QTreeWidget>
+#include <QPainterPath>
 
 AnimationTimelineEditor::AnimationTimelineEditor(QWidget *parent)
     : QWidget(parent)
@@ -145,18 +146,85 @@ void AnimationTimelineEditor::paintEditorBackground(QPainter &painter)
 	style()->drawControl(QStyle::CE_ShapedFrame, &frameOption, &painter, this);
 }
 
-void AnimationTimelineEditor::paintKeyframe(QPainter &painter, const QRect &keyframeRect, bool isSelected, bool isHovered, bool isClicked)
+static QColor lerp(const QColor &color1, const QColor &color2, qreal t)
 {
-	QBrush keyframeBrush = palette().brush(QPalette::Window);
-	keyframeBrush.setColor(keyframeBrush.color().lighter(200));
-	QBrush keyframeBrushSelected = palette().brush(QPalette::Highlight);
+	float r1, g1, b1, a1;
+	float r2, g2, b2, a2;
 
-	QBrush brush = isSelected ? keyframeBrushSelected : keyframeBrush;
+	color1.getRgbF(&r1, &g1, &b1, &a1);
+	color2.getRgbF(&r2, &g2, &b2, &a2);
 
-	if (isHovered)
-		brush.setColor(brush.color().lighter(125));
+	float r = r1 + (r2 - r1) * t;
+	float g = g1 + (g2 - g1) * t;
+	float b = b1 + (b2 - b1) * t;
+	float a = a1 + (a2 - a1) * t;
 
-	painter.fillRect(keyframeRect, brush);
+	return QColor::fromRgbF(r, g, b, a);
+}
+
+void AnimationTimelineEditor::paintKeyframe(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active)
+{
+	// Adjust the keyframe size to create a slightly rounded shape
+	QRect adjustedRect = rect.adjusted(2, 2, -2, -2);
+
+	// Path
+	QPointF top = QPointF((adjustedRect.left() + adjustedRect.right() + 1) / 2, adjustedRect.top());
+	QPointF right = QPointF(adjustedRect.right(), (adjustedRect.top() + adjustedRect.bottom() + 1) / 2);
+	QPointF bottom = QPointF((adjustedRect.left() + adjustedRect.right() + 1) / 2, adjustedRect.bottom());
+	QPointF left = QPointF(adjustedRect.left(), (adjustedRect.top() + adjustedRect.bottom() + 1) / 2);
+
+	// Create the gradient brush
+	QLinearGradient gradient(top, bottom);
+
+	QColor baseColor;
+	QColor lightColor;
+	QColor darkColor;
+	if (selected)
+	{
+		baseColor = palette().color(QPalette::Highlight);
+		lightColor = baseColor.lighter(150);
+		darkColor = baseColor.darker(125);
+	}
+	else
+	{
+		baseColor = lerp(palette().color(QPalette::Button), palette().color(QPalette::ButtonText), 0.4);
+		lightColor = baseColor.lighter(110);
+		darkColor = baseColor.darker(110);
+	}
+
+	if (active)
+	{
+		lightColor = lightColor.darker(110);
+		darkColor = darkColor.darker(110);
+	}
+	else if (hover)
+	{
+		lightColor = lightColor.lighter(125);
+		darkColor = darkColor.lighter(125);
+	}
+
+	gradient.setColorAt(0, lightColor);
+	gradient.setColorAt(1, darkColor);
+
+	QBrush brush(gradient);
+
+	QPainterPath path;
+	path.moveTo(top);
+	path.lineTo(right);
+	path.lineTo(bottom);
+	path.lineTo(left);
+	path.closeSubpath();
+
+	painter.save();
+	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.fillPath(path, brush);
+
+	// Draw the border
+	QPen borderPen(lightColor.lighter(125));
+
+	painter.setPen(borderPen);
+	painter.drawPath(path);
+	painter.restore();
 }
 
 void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
@@ -190,11 +258,11 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 		// Draw keyframes
 		for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 		{
-			int keyframeX = timeToX(keyframe.key());
-			QRect keyframeRect(keyframeX - 4, trackRect.y() + (trackRect.height() - 8) / 2, 8, 8);
+			QRect keyframeRect = this->keyframeRect(track, keyframe.key());
 			bool isSelected = m_SelectedKeyframes.contains(keyframe.value().Id);
 			bool isHovered = (keyframe.value().Id == m_HoverKeyframe);
-			paintKeyframe(painter, keyframeRect, isSelected, isHovered, false);
+			bool isPressed = (keyframe.value().Id == m_PressedKeyframe);
+			paintKeyframe(painter, keyframeRect, isSelected, isHovered, isPressed);
 		}
 	}
 
@@ -215,9 +283,10 @@ QRect AnimationTimelineEditor::keyframeRect(AnimationTrack *track, double time)
 	trackRect.setY(trackRect.y() + rect.y());
 	trackRect.setLeft(rect.left());
 	trackRect.setRight(rect.right());
+
 	int keyframeX = timeToX(time);
-	int centerY = trackRect.y() + (trackRect.height() - 8) / 2;
-	QRect keyframeRect(keyframeX - 4, centerY, 8, 8);
+	int keyframeWidth = trackRect.height(); // Set the keyframe width to match the track height
+	QRect keyframeRect(keyframeX - keyframeWidth / 2, trackRect.y(), keyframeWidth, trackRect.height());
 	return keyframeRect;
 }
 
@@ -270,6 +339,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 							}
 						}
 						m_HoverKeyframe = -1;
+						m_PressedKeyframe = keyframe.value().Id;
 						clickedKeyframe = true;
 						emit selectionChanged(m_SelectedKeyframes);
 						break;
@@ -413,8 +483,7 @@ void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 		{
 			for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 			{
-				int keyframeX = timeToX(keyframe.key());
-				QRect keyframeRect(keyframeX - 4, trackRect.y() + (trackRect.height() - 8) / 2, 8, 8);
+				QRect keyframeRect = this->keyframeRect(track, keyframe.key());
 				if (keyframeRect.contains(pos))
 				{
 					hoverKeyframe = keyframe.value().Id;
@@ -433,8 +502,9 @@ void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 void AnimationTimelineEditor::mouseReleaseEvent(QMouseEvent *event)
 {
 	Q_UNUSED(event);
-	m_TrackMoveStart = QPoint();
 	m_SelectionStart = QPoint();
+	m_TrackMoveStart = QPoint();
+	m_PressedKeyframe = -1;
 	m_OriginalAnimationTracks.clear();
 	updateMouseHover(event->pos());
 	update();
