@@ -169,6 +169,8 @@ void AnimationEditor::removeNode(AnimationNode *node)
 		parentNode->TreeWidgetItem->removeChild(node->TreeWidgetItem);
 	}
 
+	updateTimelineTracks();
+
 	deleteNodeAndChildren(node);
 }
 
@@ -185,6 +187,8 @@ AnimationTrack *AnimationEditor::addTrack(AnimationNode *node)
 	node->TreeWidgetItem->addChild(newTrack->m_TreeWidgetItem);
 
 	m_TrackTreeWidget->expandItem(node->TreeWidgetItem);
+	
+	updateTimelineTracks();
 
 	return newTrack;
 }
@@ -198,6 +202,8 @@ void AnimationEditor::removeTrack(AnimationTrack *track)
 		parentNode->Tracks.removeOne(track);
 		parentNode->TreeWidgetItem->removeChild(track->m_TreeWidgetItem);
 	}
+
+	updateTimelineTracks();
 
 	delete track->m_TreeWidgetItem;
 	delete track;
@@ -265,6 +271,28 @@ void AnimationEditor::deleteNodeAndChildren(AnimationNode *node)
 	// Delete the node itself
 	if (node != &m_RootNode)
 		delete node;
+}
+
+void AnimationEditor::updateTimelineTracks()
+{
+	QList<AnimationTrack *> tracks;
+	listTimelineTracks(tracks, &m_RootNode);
+	m_TimelineEditor->setAnimationTracks(tracks);
+}
+
+void AnimationEditor::listTimelineTracks(QList<AnimationTrack *> &tracks, AnimationNode *node)
+{
+	// Iterate through nodes
+	for (AnimationNode *childNode : node->Nodes)
+	{
+		listTimelineTracks(tracks, childNode);
+	}
+
+	// Iterate through tracks
+	for (AnimationTrack *track : node->Tracks)
+	{
+		tracks.append(track);
+	}
 }
 
 /*

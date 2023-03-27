@@ -38,9 +38,11 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QWidget>
 #include <QList>
 #include <QSet>
-#include <QPointer>
 
 #include "AnimationTrack.h"
+
+class QMouseEvent;
+class QWheelEvent;
 
 class ANIMATIONEDITOR_EXPORT AnimationTimelineEditor : public QWidget
 {
@@ -50,30 +52,51 @@ public:
 	explicit AnimationTimelineEditor(QWidget *parent = nullptr);
 	virtual ~AnimationTimelineEditor();
 
-	/*
 	// Set and get the animation tracks
-	void setAnimationTracks(const QList<QPointer<AnimationTrack>> &tracks);
-	QList<QPointer<AnimationTrack>> animationTracks() const;
+	void setAnimationTracks(const QList<AnimationTrack *> &tracks);
+	const QList<AnimationTrack *> &animationTracks() const;
 
 	// Set and get the keyframe selection
 	void setKeyframeSelection(const QSet<ptrdiff_t> &selection);
 	QSet<ptrdiff_t> keyframeSelection() const;
 
 signals:
+	void rangeChanged(double fromTime, double toTime);
 	void animationTrackChanged(AnimationTrack *track);
 	void keyframeSelectionChanged();
 
 protected:
 	// Override paintEvent to customize drawing
-	// void paintEvent(QPaintEvent *event) override;
+	void paintEvent(QPaintEvent *event) override;
+
+	// Additional event handlers
+	void mousePressEvent(QMouseEvent *event) override;
+	void mouseMoveEvent(QMouseEvent *event) override;
+	void mouseReleaseEvent(QMouseEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
 
 private:
-	QList<QPointer<AnimationTrack>> m_AnimationTracks;
-	QList<QPointer<AnimationTrack>> m_OriginalAnimationTracks;
+	QList<AnimationTrack *> m_AnimationTracks;
+	QList<AnimationTrack> m_OriginalAnimationTracks;
 	QSet<ptrdiff_t> m_KeyframeSelection;
 
-	void updateOriginalAnimationTracks();
-	*/
+	// The duration range of the animation timeline
+	double m_FromTime;
+	double m_ToTime;
+
+private:
+	// void updateOriginalAnimationTracks();
+
+	AnimationTrack *keyframeAt(const QPoint &pos, double &time);
+
+	// Helper function to calculate the track height
+	int trackHeight() const;
+
+	// Helper function to calculate the X position for a given time
+	int timeToX(double time) const;
+
+	// Helper function to calculate the time for a given X position
+	double xToTime(int x) const;
 
 }; /* class AnimationTimelineEditor */
 

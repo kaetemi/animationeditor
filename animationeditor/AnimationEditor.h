@@ -87,6 +87,8 @@ private:
 	AnimationNode *findParentNodeWithTrack(AnimationNode *startNode, AnimationTrack *track);
 	// void removeTrackFromNode(AnimationNode *node, AnimationTrack *track);
 	void deleteNodeAndChildren(AnimationNode *node);
+	void updateTimelineTracks();
+	void listTimelineTracks(QList<AnimationTrack *> &tracks, AnimationNode *node);
 
 }; /* class AnimationEditor */
 

@@ -163,7 +163,7 @@ private:
 
 }; /* class AnimationKeyframe */
 
-class ANIMATIONEDITOR_EXPORT AnimationTrack : QObject
+class ANIMATIONEDITOR_EXPORT AnimationTrack : public QObject
 {
 	Q_OBJECT
 
@@ -171,7 +171,7 @@ public:
 	explicit AnimationTrack(QObject *parent = nullptr);
 
 	// Getters
-	QMap<double, AnimationKeyframe> keyframes() const;
+	const QMap<double, AnimationKeyframe> &keyframes() const;
 	AnimationInterpolation interpolationMethod() const;
 
 	// Setters
@@ -273,7 +273,7 @@ public:
 	explicit AnimationTrack(QObject *parent = nullptr);
 
 	// Getters
-	QMap<double, AnimationKeyframe> keyframes() const;
+	const QMap<double, AnimationKeyframe> &keyframes() const;
 	AnimationInterpolation interpolationMethod() const;
 
 	// Setters

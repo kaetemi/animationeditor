@@ -41,7 +41,7 @@ AnimationTrack::AnimationTrack(QObject *parent)
 {
 }
 
-QMap<double, AnimationKeyframe> AnimationTrack::keyframes() const
+const QMap<double, AnimationKeyframe> &AnimationTrack::keyframes() const
 {
 	return m_Keyframes;
 }
