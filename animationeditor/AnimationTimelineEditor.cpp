@@ -145,6 +145,20 @@ void AnimationTimelineEditor::paintEditorBackground(QPainter &painter)
 	style()->drawControl(QStyle::CE_ShapedFrame, &frameOption, &painter, this);
 }
 
+void AnimationTimelineEditor::paintKeyframe(QPainter &painter, const QRect &keyframeRect, bool isSelected, bool isHovered, bool isClicked)
+{
+	QBrush keyframeBrush = palette().brush(QPalette::Window);
+	keyframeBrush.setColor(keyframeBrush.color().lighter(200));
+	QBrush keyframeBrushSelected = palette().brush(QPalette::Highlight);
+
+	QBrush brush = isSelected ? keyframeBrushSelected : keyframeBrush;
+
+	if (isHovered)
+		brush.setColor(brush.color().lighter(125));
+
+	painter.fillRect(keyframeRect, brush);
+}
+
 void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event);
@@ -174,17 +188,13 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 		painter.fillRect(trackRect, trackBackgroundBrush);
 
 		// Draw keyframes
-		QBrush keyframeBrush = palette().brush(QPalette::Window);
-		keyframeBrush.setColor(keyframeBrush.color().lighter(200));
-		QBrush keyframeBrushSelected = palette().brush(QPalette::Highlight);
 		for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 		{
 			int keyframeX = timeToX(keyframe.key());
 			QRect keyframeRect(keyframeX - 4, trackRect.y() + (trackRect.height() - 8) / 2, 8, 8);
-			QBrush brush = m_SelectedKeyframes.contains(keyframe.value().Id) ? keyframeBrushSelected : keyframeBrush;
-			if (keyframe.value().Id == m_HoverKeyframe)
-				brush.setColor(brush.color().lighter(125));
-			painter.fillRect(keyframeRect, brush);
+			bool isSelected = m_SelectedKeyframes.contains(keyframe.value().Id);
+			bool isHovered = (keyframe.value().Id == m_HoverKeyframe);
+			paintKeyframe(painter, keyframeRect, isSelected, isHovered, false);
 		}
 	}
 

@@ -85,6 +85,7 @@ private:
 	// Paint and layout functions
 	QRect keyframeRect(AnimationTrack *track, double time);
 	void paintEditorBackground(QPainter &painter);
+	void paintKeyframe(QPainter &painter, const QRect &keyframeRect, bool isSelected, bool isHovered, bool isClicked);
 	QRect rowsRect();
 
 	// Mouse updates
