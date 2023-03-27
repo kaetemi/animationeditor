@@ -35,11 +35,13 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QPaintEvent>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <QStyleOption>
+#include <QTreeWidget>
 
 AnimationTimelineEditor::AnimationTimelineEditor(QWidget *parent)
-    : QWidget(parent),
-	m_FromTime(0.0),
-	m_ToTime(10.0)
+    : QWidget(parent)
+    , m_FromTime(0.0)
+    , m_ToTime(10.0)
 {
 }
 
@@ -58,11 +60,6 @@ const QList<AnimationTrack *> &AnimationTimelineEditor::animationTracks() const
 	return m_AnimationTracks;
 }
 
-int AnimationTimelineEditor::trackHeight() const
-{
-	return 20; // Adjust the track height as needed
-}
-
 int AnimationTimelineEditor::timeToX(double time) const
 {
 	return static_cast<int>((time - m_FromTime) / (m_ToTime - m_FromTime) * width());
@@ -75,134 +72,139 @@ double AnimationTimelineEditor::xToTime(int x) const
 
 void AnimationTimelineEditor::setKeyframeSelection(const QSet<ptrdiff_t> &selection)
 {
-	m_KeyframeSelection = selection;
+	m_SelectedKeyframes = selection;
 	update();
 }
 
 QSet<ptrdiff_t> AnimationTimelineEditor::keyframeSelection() const
 {
-	return m_KeyframeSelection;
+	return m_SelectedKeyframes;
+}
+
+QRect AnimationTimelineEditor::visualTrackRect(AnimationTrack *track) const
+{
+	if (!track || !track->m_TreeWidgetItem)
+		return QRect();
+
+	// Calculate the track rectangle based on the item rectangle and the widget's dimensions
+	QRect rect = track->m_TreeWidgetItem->treeWidget()->visualItemRect(track->m_TreeWidgetItem);
+	if (rect.isEmpty())
+		return QRect();
+
+	rect.setLeft(0);
+	rect.setWidth(width());
+	return rect;
 }
 
 void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 {
+	Q_UNUSED(event);
+
 	QPainter painter(this);
-	painter.setRenderHint(QPainter::Antialiasing);
 
-	// Set up colors and styles
-	QColor trackBackgroundColor(240, 240, 240);
-	QColor trackBorderColor(180, 180, 180);
-	QColor keyframeColor(80, 80, 80);
-	int trackHeight = 20;
-	int keyframeWidth = 6;
-	int keyframeHeight = 12;
+	// Draw the background using the widget's palette
+	QStyleOption option;
+	option.initFrom(this);
+	style()->drawPrimitive(QStyle::PE_Widget, &option, &painter, this);
 
-	// Draw the tracks
-	int trackY = 0;
-	for (const auto &track : m_AnimationTracks)
+	// Draw the tracks and keyframes using the widget's palette
+	for (AnimationTrack *track : m_AnimationTracks)
 	{
-		QRect trackRect(0, trackY, width(), trackHeight);
-		painter.fillRect(trackRect, trackBackgroundColor);
-		painter.setPen(trackBorderColor);
-		painter.drawRect(trackRect);
-
-		// Draw the keyframes for each track
-		painter.setPen(Qt::NoPen);
-		painter.setBrush(keyframeColor);
-		for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
+		QRect trackRect = visualTrackRect(track);
+		if (trackRect.isEmpty())
 		{
-			// Calculate the X position for the keyframe based on its time
-			int keyframeX = static_cast<int>(keyframe.key() * 100); // Assuming 100 pixels per second
-
-			// Check if the keyframe is within the visible area
-			if (keyframeX >= 0 && keyframeX < width())
-			{
-				QRect keyframeRect(keyframeX - keyframeWidth / 2, trackY + (trackHeight - keyframeHeight) / 2, keyframeWidth, keyframeHeight);
-				painter.drawRect(keyframeRect);
-			}
+			continue;
 		}
 
-		trackY += trackHeight;
-	}
-}
+		// Draw the track background
+		QBrush trackBackgroundBrush = palette().brush(QPalette::AlternateBase);
+		painter.fillRect(trackRect, trackBackgroundBrush);
 
+		// Draw a line under the track
 
-AnimationTrack *AnimationTimelineEditor::keyframeAt(const QPoint &pos, double &time)
-{
-	int trackHeight = 20;
-	int keyframeWidth = 6;
-	int trackIndex = pos.y() / trackHeight;
-
-	if (trackIndex < m_AnimationTracks.size())
-	{
-		AnimationTrack *track = m_AnimationTracks[trackIndex];
-		double keyframeTime = static_cast<double>(pos.x()) / 100.0; // Assuming 100 pixels per second
-
+		// Draw keyframes
+		QBrush keyframeBrush = palette().brush(QPalette::Highlight);
 		for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 		{
-			double keyframeX = keyframe.key() * 100;
-			if (std::abs(keyframeX - pos.x()) < keyframeWidth / 2)
-			{
-				time = keyframe.key();
-				return track;
-			}
+			int keyframeX = timeToX(keyframe.key());
+			QRect keyframeRect(keyframeX - 4, trackRect.y() + (trackRect.height() - 8) / 2, 8, 8);
+			painter.fillRect(keyframeRect, keyframeBrush);
 		}
 	}
-
-	return nullptr;
 }
 
 void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 {
 	if (event->button() == Qt::LeftButton)
 	{
-		// Find the keyframe under the mouse cursor
-		double time;
-		AnimationTrack *track = keyframeAt(event->pos(), time);
-		if (track)
+		m_MousePressPosition = event->pos();
+
+		// Backup all tracks before modifying keyframes
+		m_OriginalAnimationTracks.clear();
+		for (const AnimationTrack *track : m_AnimationTracks)
 		{
-			ptrdiff_t keyframeId = track->keyframes()[time].Id;
-			if (!m_KeyframeSelection.contains(keyframeId))
-			{
-				m_KeyframeSelection.clear();
-				m_KeyframeSelection.insert(keyframeId);
-				emit keyframeSelectionChanged();
-			}
-			update();
+			m_OriginalAnimationTracks.append(track->keyframes());
 		}
-	}
-}
 
-void AnimationTimelineEditor::mouseMoveEvent(QMouseEvent *event)
-{
-	if (event->buttons() & Qt::LeftButton && !m_KeyframeSelection.isEmpty())
-	{
-		double newTime = static_cast<double>(event->pos().x()) / 100.0; // Assuming 100 pixels per second
-
-		for (const auto &track : m_AnimationTracks)
+		// Find the clicked keyframe
+		for (AnimationTrack *track : m_AnimationTracks)
 		{
-			for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
+			QRect trackRect = visualTrackRect(track);
+			if (trackRect.contains(event->pos()))
 			{
-				if (m_KeyframeSelection.contains(keyframe.value().Id))
+				for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 				{
-					double oldTime = keyframe.key();
-					track->moveKeyframe(oldTime, newTime);
-					emit animationTrackChanged(track);
-					update();
-					break;
+					int keyframeX = timeToX(keyframe.key());
+					QRect keyframeRect(keyframeX - 4, trackRect.y() + (trackRect.height() - 8) / 2, 8, 8);
+					if (keyframeRect.contains(event->pos()))
+					{
+						m_SelectedKeyframes = { keyframe.value().Id };
+						emit selectionChanged(m_SelectedKeyframes);
+						break;
+					}
 				}
 			}
 		}
 	}
 }
 
-void AnimationTimelineEditor::mouseReleaseEvent(QMouseEvent *event)
+void AnimationTimelineEditor::mouseMoveEvent(QMouseEvent *event)
 {
-	if (event->button() == Qt::LeftButton && !m_KeyframeSelection.isEmpty())
+	if (!m_SelectedKeyframes.isEmpty() && event->buttons() & Qt::LeftButton)
 	{
-		// Handle the end of dragging the keyframe selection
+		double timeDelta = xToTime(event->pos().x()) - xToTime(m_MousePressPosition.x());
+
+		for (int i = 0; i < m_AnimationTracks.size(); ++i)
+		{
+			AnimationTrack *track = m_AnimationTracks[i];
+			QMap<double, AnimationKeyframe> &originalKeyframes = m_OriginalAnimationTracks[i];
+
+			// Restore the original tracks before modifying keyframes
+			track->setKeyframes(originalKeyframes);
+			bool changed = false;
+
+			for (QMap<double, AnimationKeyframe>::const_iterator keyframe = originalKeyframes.begin(); keyframe != originalKeyframes.end(); ++keyframe)
+			{
+				if (m_SelectedKeyframes.contains(keyframe.value().Id))
+				{
+					double newTime = keyframe.key() + timeDelta;
+					track->moveKeyframe(keyframe.key(), newTime);
+					changed = true;
+				}
+			}
+
+			emit trackChanged(track);
+		}
+
 		update();
 	}
+}
+
+void AnimationTimelineEditor::mouseReleaseEvent(QMouseEvent *event)
+{
+	Q_UNUSED(event);
+	m_MousePressPosition = QPoint();
+	m_OriginalAnimationTracks.clear();
 }
 
 void AnimationTimelineEditor::wheelEvent(QWheelEvent *event)

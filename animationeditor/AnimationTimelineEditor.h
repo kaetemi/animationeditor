@@ -60,10 +60,12 @@ public:
 	void setKeyframeSelection(const QSet<ptrdiff_t> &selection);
 	QSet<ptrdiff_t> keyframeSelection() const;
 
+	QRect visualTrackRect(AnimationTrack *track) const;
+
 signals:
 	void rangeChanged(double fromTime, double toTime);
-	void animationTrackChanged(AnimationTrack *track);
-	void keyframeSelectionChanged();
+	void trackChanged(AnimationTrack *track);
+	void selectionChanged(const QSet<ptrdiff_t> &selection);
 
 protected:
 	// Override paintEvent to customize drawing
@@ -77,21 +79,15 @@ protected:
 
 private:
 	QList<AnimationTrack *> m_AnimationTracks;
-	QList<AnimationTrack> m_OriginalAnimationTracks;
-	QSet<ptrdiff_t> m_KeyframeSelection;
+	QList<QMap<double, AnimationKeyframe>> m_OriginalAnimationTracks;
+	QSet<ptrdiff_t> m_SelectedKeyframes;
+	QPoint m_MousePressPosition;
 
 	// The duration range of the animation timeline
 	double m_FromTime;
 	double m_ToTime;
 
 private:
-	// void updateOriginalAnimationTracks();
-
-	AnimationTrack *keyframeAt(const QPoint &pos, double &time);
-
-	// Helper function to calculate the track height
-	int trackHeight() const;
-
 	// Helper function to calculate the X position for a given time
 	int timeToX(double time) const;
 

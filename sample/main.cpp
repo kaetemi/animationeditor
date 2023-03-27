@@ -54,9 +54,9 @@ int main(int argc, char *argv[]) {
     track1->upsertKeyframe(2.0, 1.0);
 
 	AnimationTrack *track2 = animationEditor->addTrack();
-    track1->upsertKeyframe(0.5, 2.0);
-    track1->upsertKeyframe(1.5, 3.0);
-    track1->upsertKeyframe(2.5, 2.0);
+	track2->upsertKeyframe(0.5, 2.0);
+	track2->upsertKeyframe(1.5, 3.0);
+	track2->upsertKeyframe(2.5, 2.0);
 
 	mainWindow.resize(900, 400);
     mainWindow.show();
