@@ -211,6 +211,97 @@ private:
 
 }; /* class AnimationTrack */
 
+#if 0
+
+// Summarized copy
+
+enum class AnimationInterpolation
+{
+	Step,
+	Linear,
+	Bezier,
+	TensionContinuityBias,
+	EaseInOut,
+};
+
+struct ANIMATIONEDITOR_EXPORT AnimationKeyframe
+{
+	// Identifier for the UI
+	ptrdiff_t Id;
+
+	// Value on Y-axis
+	double Value;
+
+	// Interpolation data for different methods
+	union InterpolationData
+	{
+		// Bezier handles, relative to the keyframe
+		struct
+		{
+			double InTangentX;
+			double InTangentY;
+			double OutTangentX;
+			double OutTangentY;
+		} Bezier;
+
+		// TCB interpolation parameters
+		struct
+		{
+			double Tension;
+			double Continuity;
+			double Bias;
+		} TCB;
+
+		// Ease In/Out interpolation parameters
+		struct
+		{
+			double EaseIn;
+			double EaseOut;
+		} EaseInOut;
+	} Interpolation;
+
+private:
+	friend AnimationTrack;
+
+}; /* class AnimationKeyframe */
+
+class ANIMATIONEDITOR_EXPORT AnimationTrack : QObject
+{
+	Q_OBJECT
+
+public:
+	explicit AnimationTrack(QObject *parent = nullptr);
+
+	// Getters
+	QMap<double, AnimationKeyframe> keyframes() const;
+	AnimationInterpolation interpolationMethod() const;
+
+	// Setters
+	void setKeyframes(const QMap<double, AnimationKeyframe> &keyframes);
+	void setInterpolationMethod(AnimationInterpolation interpolationMethod);
+
+	// Keyframe manipulation
+	void upsertKeyframe(double time, const AnimationKeyframe &keyframe);
+	void removeKeyframe(double time);
+	void moveKeyframe(double fromTime, double toTime);
+
+signals:
+	void keyframesChanged();
+	void interpolationMethodChanged();
+
+private:
+	friend AnimationEditor;
+	friend AnimationTimelineEditor;
+	friend AnimationCurveEditor;
+
+	QMap<double, AnimationKeyframe> m_Keyframes;
+	AnimationInterpolation m_InterpolationMethod;
+	QTreeWidgetItem *m_TreeWidgetItem;
+
+}; /* class AnimationTrack */
+
+#endif
+
 #endif /* ANIMATION_TRACK__H */
 
 /* end of file */

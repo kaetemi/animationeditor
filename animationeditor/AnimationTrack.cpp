@@ -371,6 +371,10 @@ The system is functional and provides a good foundation for building upon. Howev
 
 This summary should provide a clear understanding of the current state of the time scrubber and its underlying components, enabling the planning of future improvements and extensions.
 
+- Consider using QPointF for Bezier handle representation:
+Instead of using separate variables for X and Y coordinates of InTangent and OutTangent,
+you can use QPointF from the Qt library to represent the coordinates as a single object.
+
 */
 
 /* end of file */
