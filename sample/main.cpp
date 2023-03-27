@@ -30,28 +30,47 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QApplication>
 #include <QMainWindow>
 #include <QVBoxLayout>
+#include <QStyleFactory>
+
 #include "AnimationEditor.h" // Include the header file for your AnimationEditor widget
 
-int main(int argc, char *argv[]) {
-    QApplication app(argc, argv);
+int main(int argc, char *argv[])
+{
+	QApplication app(argc, argv);
 
-    QMainWindow mainWindow;
-    mainWindow.setWindowTitle("Animation Editor Preview");
+	QApplication::setStyle(QStyleFactory::create("Fusion"));
+	QPalette palette = qApp->palette();
+	palette.setColor(QPalette::Window, QColor(64, 64, 64));
+	palette.setColor(QPalette::WindowText, Qt::white);
+	palette.setColor(QPalette::Base, QColor(48, 48, 48));
+	palette.setColor(QPalette::AlternateBase, QColor(64, 64, 64));
+	palette.setColor(QPalette::ToolTipBase, Qt::white);
+	palette.setColor(QPalette::ToolTipText, Qt::white);
+	palette.setColor(QPalette::Text, Qt::white);
+	palette.setColor(QPalette::Button, QColor(64, 64, 64));
+	palette.setColor(QPalette::ButtonText, Qt::white);
+	palette.setColor(QPalette::BrightText, Qt::red);
+	palette.setColor(QPalette::Highlight, QColor(64, 128, 96));
+	palette.setColor(QPalette::HighlightedText, Qt::white);
+	qApp->setPalette(palette);
 
-    QWidget *centralWidget = new QWidget(&mainWindow);
+	QMainWindow mainWindow;
+	mainWindow.setWindowTitle("Animation Editor Preview");
+
+	QWidget *centralWidget = new QWidget(&mainWindow);
 	QVBoxLayout *layout = new QVBoxLayout(centralWidget);
 
 	AnimationEditor *animationEditor = new AnimationEditor(centralWidget);
-    layout->addWidget(animationEditor);
+	layout->addWidget(animationEditor);
 
-    centralWidget->setLayout(layout);
-    mainWindow.setCentralWidget(centralWidget);
+	centralWidget->setLayout(layout);
+	mainWindow.setCentralWidget(centralWidget);
 
-    // Add sample tracks and keyframes for testing purposes
-    AnimationTrack *track1 = animationEditor->addTrack();
-    track1->upsertKeyframe(0.0, 1.0);
-    track1->upsertKeyframe(1.0, 2.0);
-    track1->upsertKeyframe(2.0, 1.0);
+	// Add sample tracks and keyframes for testing purposes
+	AnimationTrack *track1 = animationEditor->addTrack();
+	track1->upsertKeyframe(0.0, 1.0);
+	track1->upsertKeyframe(1.0, 2.0);
+	track1->upsertKeyframe(2.0, 1.0);
 
 	AnimationTrack *track2 = animationEditor->addTrack();
 	track2->upsertKeyframe(0.5, 2.0);
@@ -59,9 +78,9 @@ int main(int argc, char *argv[]) {
 	track2->upsertKeyframe(2.5, 2.0);
 
 	mainWindow.resize(900, 400);
-    mainWindow.show();
+	mainWindow.show();
 
-    return app.exec();
+	return app.exec();
 }
 
 /* end of file */

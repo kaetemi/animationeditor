@@ -134,6 +134,9 @@ AnimationEditor::AnimationEditor(QWidget *parent)
 
 	// Set up the tree widget
 	m_RootNode.TreeWidgetItem = m_TrackTreeWidget->invisibleRootItem();
+
+	// Hide the header in the tree widget
+	m_TrackTreeWidget->setHeaderHidden(true);
 }
 
 AnimationEditor::~AnimationEditor()

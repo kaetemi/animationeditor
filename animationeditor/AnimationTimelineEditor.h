@@ -43,6 +43,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 class QMouseEvent;
 class QWheelEvent;
+class QTreeWidget;
 
 class ANIMATIONEDITOR_EXPORT AnimationTimelineEditor : public QWidget
 {
@@ -82,12 +83,17 @@ private:
 	QList<QMap<double, AnimationKeyframe>> m_OriginalAnimationTracks;
 	QSet<ptrdiff_t> m_SelectedKeyframes;
 	QPoint m_MousePressPosition;
+	QTreeWidget *m_TreeWidget = nullptr;
 
 	// The duration range of the animation timeline
 	double m_FromTime;
 	double m_ToTime;
 
 private:
+	// Paint functions
+	void paintEditorBackground(QPainter &painter);
+	QRect rowsRect();
+
 	// Helper function to calculate the X position for a given time
 	int timeToX(double time) const;
 

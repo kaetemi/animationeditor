@@ -96,21 +96,67 @@ QRect AnimationTimelineEditor::visualTrackRect(AnimationTrack *track) const
 	return rect;
 }
 
+QRect AnimationTimelineEditor::rowsRect()
+{
+	// Find tree view if we haven't already
+	if (!m_TreeWidget)
+	{
+		for (AnimationTrack *track : m_AnimationTracks)
+		{
+			if (track->m_TreeWidgetItem && track->m_TreeWidgetItem->treeWidget())
+			{
+				m_TreeWidget = track->m_TreeWidgetItem->treeWidget();
+				break;
+			}
+		}
+	}
+
+	QRect rect = QRect(0, 0, width(), height());
+
+	if (m_TreeWidget)
+	{
+		int outlineSize = m_TreeWidget->frameWidth();
+		rect.adjust(outlineSize, outlineSize, -outlineSize, -outlineSize);
+	}
+
+	return rect;
+}
+
+void AnimationTimelineEditor::paintEditorBackground(QPainter &painter)
+{
+	// Draw frame using QStyle
+	QStyleOptionFrame frameOption;
+	frameOption.initFrom(this);
+	frameOption.rect = QRect(0, 0, width(), height());
+	frameOption.frameShape = m_TreeWidget ? m_TreeWidget->frameShape() : QFrame::StyledPanel;
+	frameOption.lineWidth = m_TreeWidget ? m_TreeWidget->frameWidth() : 1; // Set the frame width
+	frameOption.midLineWidth = m_TreeWidget ? m_TreeWidget->midLineWidth() : 0; // No mid-line width
+	frameOption.state |= QStyle::State_Sunken; // Optional: for a sunken frame appearance
+	frameOption.features = QStyleOptionFrame::Flat;
+	style()->drawControl(QStyle::CE_ShapedFrame, &frameOption, &painter, this);
+
+	// Paint background and verride the top border
+	QRect bgRect = rowsRect();
+	QRect topRect = QRect(bgRect.x(), 0, bgRect.width(), bgRect.height() + bgRect.x());
+	QBrush baseBrush = palette().brush(QPalette::Base);
+	painter.fillRect(topRect, baseBrush);
+}
+
 void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event);
 
 	QPainter painter(this);
+	QRect rect = rowsRect();
 
-	// Draw the background using the widget's palette
-	QStyleOption option;
-	option.initFrom(this);
-	style()->drawPrimitive(QStyle::PE_Widget, &option, &painter, this);
+	// Draw the background
+	paintEditorBackground(painter);
 
 	// Draw the tracks and keyframes using the widget's palette
 	for (AnimationTrack *track : m_AnimationTracks)
 	{
 		QRect trackRect = visualTrackRect(track);
+		trackRect = QRect(rect.x(), trackRect.y() + rect.y(), rect.width(), trackRect.height());
 		if (trackRect.isEmpty())
 		{
 			continue;
@@ -121,6 +167,7 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 		painter.fillRect(trackRect, trackBackgroundBrush);
 
 		// Draw a line under the track
+		// ...
 
 		// Draw keyframes
 		QBrush keyframeBrush = palette().brush(QPalette::Highlight);
@@ -138,6 +185,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 	if (event->button() == Qt::LeftButton)
 	{
 		m_MousePressPosition = event->pos();
+		QRect rect = rowsRect();
 
 		// Backup all tracks before modifying keyframes
 		m_OriginalAnimationTracks.clear();
@@ -150,6 +198,9 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 		for (AnimationTrack *track : m_AnimationTracks)
 		{
 			QRect trackRect = visualTrackRect(track);
+			trackRect.setY(trackRect.y() + rect.y());
+			trackRect.setLeft(rect.left());
+			trackRect.setRight(rect.right());
 			if (trackRect.contains(event->pos()))
 			{
 				for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
@@ -223,5 +274,14 @@ void AnimationTimelineEditor::wheelEvent(QWheelEvent *event)
 		QWidget::wheelEvent(event); // Pass the event to the base class for default behavior
 	}
 }
+
+/*
+*
+ChatGPT Dump:
+
+- Enhance mouse interactions for a smoother user experience, such as multi-selecting keyframes,
+moving multiple keyframes simultaneously, and snap-to-grid functionality.
+
+*/
 
 /* end of file */
