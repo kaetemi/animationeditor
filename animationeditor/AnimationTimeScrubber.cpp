@@ -31,8 +31,13 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include "AnimationTimeScrubber.h"
 
+#include <QApplication>
+
 #include <QMouseEvent>
 #include <QPainter>
+
+#include <QStyle>
+#include <QStyleOptionSlider>
 
 AnimationTimeScrubber::AnimationTimeScrubber(QWidget *parent)
     : QWidget(parent)
@@ -213,11 +218,24 @@ void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 	}
 
 	// Draw the scrubber handle.
-	const int scrubberSize = 10;
+	const int scrubberSize = 20;
 	int scrubberX = timeToPixel(m_CurrentTime) - scrubberSize / 2;
 	int scrubberY = height() - 20;
 	QRect scrubberRect(scrubberX, scrubberY, scrubberSize, scrubberSize);
-	painter.fillRect(scrubberRect, scrubberColor);
+
+	QStyleOptionSlider option;
+	option.initFrom(this);
+	option.minimum = 0;
+	option.maximum = 1;
+	option.sliderPosition = 0;
+	option.subControls = QStyle::SC_SliderHandle;
+	option.activeSubControls = QStyle::SC_SliderHandle;
+	option.rect = scrubberRect;
+	option.orientation = Qt::Horizontal;
+
+	// Get the handle style from the widget style and draw it.
+	const QStyle* style = QApplication::style();
+	style->drawComplexControl(QStyle::CC_Slider, &option, &painter, this);
 
 	// Draw the current time and frame label.
 	QString currentTimeText = QString::number(m_CurrentTime, 'f', 2);
@@ -225,5 +243,6 @@ void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 	QRect textRect = QRect(scrubberRect.x() + scrubberSize / 2, scrubberY - 20, 100, 20);
 	painter.drawText(textRect, Qt::AlignLeft | Qt::AlignTop, currentTimeText + "s / " + currentFrameText + "f @ " + QString::number(m_FrameRate) + "fps");
 }
+
 
 /* end of file */
