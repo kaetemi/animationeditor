@@ -42,6 +42,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QGraphicsDropShadowEffect>
 #include <QMenu>
 #include <QAction>
+#include <QScrollBar>
 
 AnimationContextMenu::AnimationContextMenu(QWidget *parent) : QMenu(parent)
 {
@@ -222,6 +223,7 @@ QRect AnimationTimelineEditor::rowsRect()
 			if (track->m_TreeWidgetItem && track->m_TreeWidgetItem->treeWidget())
 			{
 				m_TreeWidget = track->m_TreeWidgetItem->treeWidget();
+				connect(m_TreeWidget->verticalScrollBar(), &QScrollBar::valueChanged, this, static_cast<void (AnimationTimelineEditor::*)()>(&AnimationTimelineEditor::update));
 				break;
 			}
 		}
