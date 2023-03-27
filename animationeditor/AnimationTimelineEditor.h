@@ -77,11 +77,15 @@ protected:
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void mouseReleaseEvent(QMouseEvent *event) override;
 	void wheelEvent(QWheelEvent *event) override;
+	void enterEvent(QEnterEvent *event) override;
+	void leaveEvent(QEvent *event) override;
 
 private:
 	QList<AnimationTrack *> m_AnimationTracks;
 	QList<QMap<double, AnimationKeyframe>> m_OriginalAnimationTracks;
 	QSet<ptrdiff_t> m_SelectedKeyframes;
+	ptrdiff_t m_HoverKeyframe;
+	bool m_MouseHover = false;
 	QPoint m_MousePressPosition;
 	QTreeWidget *m_TreeWidget = nullptr;
 
@@ -93,6 +97,9 @@ private:
 	// Paint functions
 	void paintEditorBackground(QPainter &painter);
 	QRect rowsRect();
+
+	// Mouse updates
+	void updateMouseHover(const QPoint &pos);
 
 	// Helper function to calculate the X position for a given time
 	int timeToX(double time) const;

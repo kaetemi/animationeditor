@@ -181,9 +181,13 @@ void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 	QPainter painter(this);
 
 	// Get the colors from the widget's palette.
+	QColor bgColor = palette().color(QPalette::Base);
 	QColor rulerColor = palette().color(QPalette::Window);
 	QColor tickColor = palette().color(QPalette::WindowText);
 	QColor scrubberColor = palette().color(QPalette::Highlight);
+
+	// Draw the background
+	painter.fillRect(rect(), bgColor);
 
 	// Draw the ruler.
 	const int rulerTopMargin = 10;
