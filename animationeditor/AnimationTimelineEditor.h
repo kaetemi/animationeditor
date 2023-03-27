@@ -109,9 +109,10 @@ private:
 	QSet<ptrdiff_t> m_SelectedKeyframes;
 	QList<ptrdiff_t> m_SelectedKeyframesBackup;
 
-	// Hover and pressed keyframe
+	// Hover and pressed keyframe and track
 	ptrdiff_t m_HoverKeyframe;
 	ptrdiff_t m_PressedKeyframe;
+	AnimationTrack *m_HoverTrack = nullptr;
 
 	// Mouse hover state
 	bool m_MouseHover = false;

@@ -273,11 +273,18 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 
 		// Draw the track background
 		QBrush trackBackgroundBrush = palette().brush(QPalette::AlternateBase);
-		if (i & 1)
+		if (track == m_HoverTrack)
+			trackBackgroundBrush.setColor(trackBackgroundBrush.color().lighter(110));
+		else if (i & 1)
 			trackBackgroundBrush.setColor(trackBackgroundBrush.color().lighter(105));
 		else
 			trackBackgroundBrush.setColor(trackBackgroundBrush.color().darker(105));
 		painter.fillRect(trackRect, trackBackgroundBrush);
+
+		QPen separatorPen(trackBackgroundBrush.color().lighter(105));
+		separatorPen.setWidthF(1.0);
+		painter.setPen(separatorPen);
+		painter.drawLine(rect.x(), trackRect.y() - 1, rect.right(), trackRect.y() - 1);
 
 		// Draw keyframes
 		for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
@@ -361,6 +368,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 							}
 						}
 						m_HoverKeyframe = -1;
+						m_HoverTrack = nullptr;
 						m_PressedKeyframe = keyframe.value().Id;
 						clickedKeyframe = true;
 						emit selectionChanged(m_SelectedKeyframes);
@@ -379,6 +387,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 			}
 			m_TrackMoveStart = QPoint();
 			m_SelectionStart = event->pos();
+			m_HoverTrack = nullptr;
 			emit selectionChanged(m_SelectedKeyframes);
 		}
 		else
@@ -477,6 +486,7 @@ void AnimationTimelineEditor::mouseMoveEvent(QMouseEvent *event)
 		}
 
 		m_HoverKeyframe = -1;
+		m_HoverTrack = nullptr;
 		update();
 	}
 	else if (m_MouseHover)
@@ -501,6 +511,9 @@ void AnimationTimelineEditor::leaveEvent(QEvent *event)
 {
 	Q_UNUSED(event);
 	m_MouseHover = false;
+	m_HoverKeyframe = -1;
+	m_HoverTrack = nullptr;
+	update();
 }
 
 void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
@@ -508,6 +521,7 @@ void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 	// Find the hovered keyframe
 	QRect rect = rowsRect();
 	ptrdiff_t hoverKeyframe = -1;
+	AnimationTrack *hoverTrack = nullptr;
 	for (AnimationTrack *track : m_AnimationTracks)
 	{
 		QRect trackRect = visualTrackRect(track);
@@ -516,6 +530,7 @@ void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 		trackRect.setRight(rect.right());
 		if (trackRect.contains(pos))
 		{
+			hoverTrack = track;
 			for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 			{
 				QRect keyframeRect = this->keyframeRect(track, keyframe.key());
@@ -527,9 +542,11 @@ void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 			}
 		}
 	}
-	if (m_HoverKeyframe != hoverKeyframe)
+	if (m_HoverKeyframe != hoverKeyframe || (m_SelectionStart.isNull() && m_HoverTrack != hoverTrack))
 	{
 		m_HoverKeyframe = hoverKeyframe;
+		if (m_SelectionStart.isNull())
+			m_HoverTrack = hoverTrack;
 		update();
 	}
 }
