@@ -110,12 +110,14 @@ void AnimationTimelineEditor::contextMenuEvent(QContextMenuEvent *event)
 		}
 	}
 
+	m_ContextMenuOpen = true;
 	m_ContextMousePosition = event->pos();
 	m_ContextMenu->exec(event->globalPos());
 }
 
 void AnimationTimelineEditor::onContextMenuClosed()
 {
+	m_ContextMenuOpen = false;
 	m_ContextMenuTrack = nullptr;
 	update();
 }
@@ -356,7 +358,7 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 
 		// Draw the track background
 		QBrush trackBackgroundBrush = palette().brush(QPalette::AlternateBase);
-		if (track == m_ContextMenuTrack && track == m_HoverTrack)
+		if (track == m_ContextMenuTrack && (track == m_CurrentHoverTrack || m_ContextMenuOpen))
 			trackBackgroundBrush = palette().brush(QPalette::Highlight);
 		else if (track == m_HoverTrack)
 			trackBackgroundBrush.setColor(trackBackgroundBrush.color().lighter(110));
@@ -409,6 +411,7 @@ QRect AnimationTimelineEditor::keyframeRect(AnimationTrack *track, double time)
 void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 {
 	m_SkipContextMenu = false;
+	m_MouseMovePosition = event->pos();
 
 	if (event->button() == Qt::LeftButton)
 	{
@@ -529,6 +532,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 		}
 	}
 
+	mouseMoveEvent(event);
 	update();
 }
 
@@ -655,7 +659,10 @@ void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 	{
 		m_HoverKeyframe = hoverKeyframe;
 		if (m_SelectionStart.isNull())
+		{
 			m_HoverTrack = hoverTrack;
+			m_CurrentHoverTrack = m_HoverTrack;
+		}
 		update();
 	}
 }
@@ -667,7 +674,8 @@ void AnimationTimelineEditor::mouseReleaseEvent(QMouseEvent *event)
 	m_TrackMoveStart = QPoint();
 	m_PressedKeyframe = -1;
 	m_OriginalAnimationTracks.clear();
-	updateMouseHover(event->pos());
+	// updateMouseHover(event->pos());
+	mouseMoveEvent(event);
 	update();
 }
 

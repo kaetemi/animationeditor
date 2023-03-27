@@ -148,6 +148,7 @@ private:
 	ptrdiff_t m_HoverKeyframe;
 	ptrdiff_t m_PressedKeyframe;
 	AnimationTrack *m_HoverTrack = nullptr;
+	AnimationTrack *m_CurrentHoverTrack = nullptr;
 	AnimationTrack *m_ContextMenuTrack = nullptr;
 
 	// Mouse hover state
@@ -159,6 +160,7 @@ private:
 	QPoint m_SelectionStart;
 	QPoint m_ContextMousePosition;
 	bool m_SkipContextMenu = false;
+	bool m_ContextMenuOpen = false;
 
 	// The duration range of the animation timeline
 	double m_FromTime;
