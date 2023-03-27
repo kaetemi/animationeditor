@@ -36,8 +36,10 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 AnimationTimeScrubber::AnimationTimeScrubber(QWidget *parent)
     : QWidget(parent)
-    , m_Duration(90.0)
-    , m_CurrentTime(10.0)
+    , m_FromTime(0.0)
+	, m_ToTime(10.0)
+	, m_FrameRate(30)
+    , m_CurrentTime(2.5)
     , m_IsDragging(false)
 {
 	setMinimumHeight(50);
@@ -48,15 +50,27 @@ AnimationTimeScrubber::~AnimationTimeScrubber()
 {
 }
 
-void AnimationTimeScrubber::setDuration(double duration)
+void AnimationTimeScrubber::setDuration(double from, double to)
 {
-	m_Duration = duration;
+	m_FromTime = from;
+	m_ToTime = to;
 	update();
+}
+
+void AnimationTimeScrubber::setFrameRate(double frameRate)
+{
+	m_FrameRate = frameRate;
+	update();
+}
+
+int AnimationTimeScrubber::frameRate() const
+{
+	return m_FrameRate;
 }
 
 void AnimationTimeScrubber::setCurrentTime(double time)
 {
-	m_CurrentTime = qBound(0.0f, time, m_Duration);
+	m_CurrentTime = qBound(m_FromTime, time, m_ToTime);
 	update();
 }
 
@@ -67,12 +81,16 @@ double AnimationTimeScrubber::currentTime() const
 
 int AnimationTimeScrubber::timeToPixel(double time) const
 {
-	return static_cast<int>((time / m_Duration) * rulerWidth());
+	double timeRange = m_ToTime - m_FromTime;
+	double pixelsPerSecond = static_cast<double>(width()) / timeRange;
+	return static_cast<int>((time - m_FromTime) * pixelsPerSecond);
 }
 
 double AnimationTimeScrubber::pixelToTime(int pixel) const
 {
-	return (static_cast<double>(pixel) / rulerWidth()) * m_Duration;
+	double timeRange = m_ToTime - m_FromTime;
+	double secondsPerPixel = timeRange / static_cast<double>(width());
+	return m_FromTime + pixel * secondsPerPixel;
 }
 
 int AnimationTimeScrubber::rulerWidth() const
@@ -116,6 +134,7 @@ void AnimationTimeScrubber::mouseReleaseEvent(QMouseEvent *event)
 	}
 }
 
+/*
 void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 {
 	QPainter painter(this);
@@ -147,6 +166,64 @@ void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 	painter.setPen(Qt::NoPen);
 	painter.setBrush(Qt::blue);
 	painter.drawRoundedRect(handleRect, 2, 2);
+}
+*/
+
+void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
+{
+	Q_UNUSED(event);
+
+	QPainter painter(this);
+
+	// Get the colors from the widget's palette.
+	QColor rulerColor = palette().color(QPalette::Window);
+	QColor tickColor = palette().color(QPalette::WindowText);
+	QColor scrubberColor = palette().color(QPalette::Highlight);
+
+	// Draw the ruler.
+	const int rulerTopMargin = 10;
+	const int rulerHeight = height() - rulerTopMargin;
+	const int rulerWidth = this->rulerWidth();
+
+	painter.fillRect(0, rulerTopMargin, rulerWidth, rulerHeight, rulerColor);
+
+	// Draw tick marks for each second.
+	const int tickHeight = 10;
+	const int frameTickHeight = 5;
+
+	for (double time = m_FromTime; time <= m_ToTime; time += 1.0)
+	{
+		int x = timeToPixel(time);
+
+		if (fmod(time, 1.0) == 0.0)
+		{
+			// Draw a long tick mark for every second.
+			painter.fillRect(x, rulerTopMargin, 1, tickHeight * 2, tickColor);
+		}
+		else if (m_FrameRate > 0 && fmod(time * m_FrameRate, 1.0) == 0.0)
+		{
+			// Draw a short tick mark for every frame.
+			painter.fillRect(x, rulerTopMargin, 1, frameTickHeight, tickColor);
+		}
+		else
+		{
+			// Draw a short tick mark for every second.
+			painter.fillRect(x, rulerTopMargin, 1, tickHeight, tickColor);
+		}
+	}
+
+	// Draw the scrubber handle.
+	const int scrubberSize = 10;
+	int scrubberX = timeToPixel(m_CurrentTime) - scrubberSize / 2;
+	int scrubberY = height() - 20;
+	QRect scrubberRect(scrubberX, scrubberY, scrubberSize, scrubberSize);
+	painter.fillRect(scrubberRect, scrubberColor);
+
+	// Draw the current time and frame label.
+	QString currentTimeText = QString::number(m_CurrentTime, 'f', 2);
+	QString currentFrameText = QString::number(timeToPixel(m_CurrentTime), 'f', 0);
+	QRect textRect = QRect(scrubberRect.x() + scrubberSize / 2, scrubberY - 20, 100, 20);
+	painter.drawText(textRect, Qt::AlignLeft | Qt::AlignTop, currentTimeText + "s / " + currentFrameText + "f @ " + QString::number(m_FrameRate) + "fps");
 }
 
 /* end of file */

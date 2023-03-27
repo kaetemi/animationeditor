@@ -45,46 +45,57 @@ public:
 	explicit AnimationTimeScrubber(QWidget *parent = nullptr);
 	virtual ~AnimationTimeScrubber();
 
-	// Set the duration of the animation timeline.
-	void setDuration(double duration);
+	// Set the duration of the animation timeline
+	void setDuration(double from, double to);
 
-	// Set the current time of the scrubber.
+	// Set the frame rate of the animation
+	void setFrameRate(double frameRate);
+
+	// Get the frame rate of the animation.
+	int frameRate() const;
+
+	// Set the current time of the scrubber
 	void setCurrentTime(double time);
 
-	// Get the current time of the scrubber.
+	// Get the current time of the scrubber
 	double currentTime() const;
 
 signals:
-	// Signal emitted when the current time changes.
+	// Signal emitted when the current time changes
 	void currentTimeChanged(double time);
 
 protected:
-	// Override the paint event to draw the time ruler and scrubber handle.
+	// Override the paint event to draw the time ruler and scrubber handle
 	void paintEvent(QPaintEvent *event) override;
 
-	// Override the mouse events to handle scrubber interactions.
+	// Override the mouse events to handle scrubber interactions
 	void mousePressEvent(QMouseEvent *event) override;
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void mouseReleaseEvent(QMouseEvent *event) override;
 
 private:
-	// Convert the timeline duration to a pixel value.
+	// Convert the timeline duration to a pixel value
 	int timeToPixel(double time) const;
 
-	// Convert a pixel value to the timeline duration.
+	// Convert a pixel value to the timeline duration
 	double pixelToTime(int pixel) const;
 
-	// Helper method to calculate the width of the ruler.
+	// Helper method to calculate the width of the ruler
 	int rulerWidth() const;
 
-	// The duration of the animation timeline.
-	double m_Duration;
+	// The duration range of the animation timeline
+	double m_FromTime;
+	double m_ToTime;
+
+	// The frame rate of the animation.
+	int m_FrameRate;
 
 	// The current time of the scrubber.
 	double m_CurrentTime;
 
-	// A flag indicating whether the user is currently dragging the scrubber.
+	// A flag indicating whether the user is currently dragging the scrubber
 	bool m_IsDragging;
+
 }; /* class AnimationEditor */
 
 #endif /* ANIMATION_TIME_SCRUBBER__H */
