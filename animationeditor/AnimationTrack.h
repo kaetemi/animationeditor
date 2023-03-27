@@ -47,6 +47,8 @@ multiple interpolation methods for smooth transitions between keyframes.
 #include <QObject>
 #include <QMap>
 
+#include <atomic>
+
 class AnimationEditor;
 class AnimationTimelineEditor;
 class AnimationCurveEditor;
@@ -96,6 +98,59 @@ struct AnimationKeyframe
 			double EaseOut;
 		} EaseInOut;
 	} Interpolation;
+
+	// Constructor for Linear interpolation
+	AnimationKeyframe()
+		: Id(s_NextId)
+		, Value(0.0)
+	{
+		Interpolation.Bezier.InTangentX = 0.0;
+		Interpolation.Bezier.InTangentY = 0.0;
+		Interpolation.Bezier.OutTangentX = 0.0;
+		Interpolation.Bezier.OutTangentY = 0.0;
+	}
+
+	// Constructor for Linear interpolation
+	AnimationKeyframe(double value)
+		: Id(s_NextId++)
+		, Value(value)
+	{
+	}
+
+	// Constructor for Bezier interpolation
+	AnimationKeyframe(double value, double inTangentX, double inTangentY, double outTangentX, double outTangentY)
+		: Id(s_NextId++)
+		, Value(value)
+	{
+		Interpolation.Bezier.InTangentX = inTangentX;
+		Interpolation.Bezier.InTangentY = inTangentY;
+		Interpolation.Bezier.OutTangentX = outTangentX;
+		Interpolation.Bezier.OutTangentY = outTangentY;
+	}
+
+	// Constructor for TCB interpolation
+	AnimationKeyframe(double value, double tension, double continuity, double bias)
+		: Id(s_NextId++)
+		, Value(value)
+	{
+		Interpolation.TCB.Tension = tension;
+		Interpolation.TCB.Continuity = continuity;
+		Interpolation.TCB.Bias = bias;
+	}
+
+	// Constructor for Ease In/Out interpolation
+	AnimationKeyframe(double value, double easeIn, double easeOut)
+		: Id(s_NextId++)
+		, Value(value)
+	{
+		Interpolation.EaseInOut.EaseIn = easeIn;
+		Interpolation.EaseInOut.EaseOut = easeOut;
+	}
+
+private:
+	friend AnimationTrack;
+	// Atomic ID generator
+	static std::atomic<ptrdiff_t> s_NextId;
 
 }; /* class AnimationKeyframe */
 

@@ -48,17 +48,15 @@ int main(int argc, char *argv[]) {
     mainWindow.setCentralWidget(centralWidget);
 
     // Add sample tracks and keyframes for testing purposes
-	/*
-    EditorTrack *track1 = animationEditor->addTrack();
-    animationEditor->addKeyframe(0.0f, 1.0f, track1);
-    animationEditor->addKeyframe(1.0f, 2.0f, track1);
-    animationEditor->addKeyframe(2.0f, 1.0f, track1);
+    AnimationTrack *track1 = animationEditor->addTrack();
+    track1->upsertKeyframe(0.0, 1.0);
+    track1->upsertKeyframe(1.0, 2.0);
+    track1->upsertKeyframe(2.0, 1.0);
 
-	EditorTrack *track2 = animationEditor->addTrack();
-    animationEditor->addKeyframe(0.5f, 2.0f, track2);
-    animationEditor->addKeyframe(1.5f, 3.0f, track2);
-    animationEditor->addKeyframe(2.5f, 2.0f, track2);
-	*/
+	AnimationTrack *track2 = animationEditor->addTrack();
+    track1->upsertKeyframe(0.5, 2.0);
+    track1->upsertKeyframe(1.5, 3.0);
+    track1->upsertKeyframe(2.5, 2.0);
 
 	mainWindow.resize(900, 400);
     mainWindow.show();

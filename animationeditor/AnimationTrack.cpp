@@ -31,6 +31,9 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include "AnimationTrack.h"
 
+// Initialize the atomic ID generator
+std::atomic<ptrdiff_t> AnimationKeyframe::s_NextId(0);
+
 AnimationTrack::AnimationTrack(QObject *parent)
     : QObject(parent)
     , m_Keyframes()
@@ -50,6 +53,7 @@ AnimationInterpolation AnimationTrack::interpolationMethod() const
 
 void AnimationTrack::setKeyframes(const QMap<double, AnimationKeyframe> &keyframes)
 {
+	// This uses existing keyframes to preserve their IDs
 	m_Keyframes = keyframes;
 	emit keyframesChanged();
 }
@@ -62,7 +66,9 @@ void AnimationTrack::setInterpolationMethod(AnimationInterpolation interpolation
 
 void AnimationTrack::upsertKeyframe(double time, const AnimationKeyframe &keyframe)
 {
-	m_Keyframes.insert(time, keyframe);
+	QMap<double, AnimationKeyframe>::iterator it = m_Keyframes.insert(time, keyframe);
+	// Assign a unique ID to the keyframe
+	it->Id = AnimationKeyframe::s_NextId++;
 	emit keyframesChanged();
 }
 

@@ -45,6 +45,12 @@ class AnimationTimelineEditor;
 class AnimationCurveEditor;
 class AnimationTimeScrubber;
 
+struct AnimationNode
+{
+	QList<AnimationNode *> Nodes;
+	QList<AnimationTrack *> Tracks;
+};
+
 class ANIMATIONEDITOR_EXPORT AnimationEditor : public QWidget
 {
 	Q_OBJECT
@@ -53,6 +59,12 @@ public:
 	AnimationEditor(QWidget *parent);
 	virtual ~AnimationEditor();
 
+	// Functions to add and remove nodes and tracks
+	AnimationNode *addNode(AnimationNode *parentNode = nullptr);
+	void removeNode(AnimationNode *node);
+	AnimationTrack *addTrack(AnimationNode *node = nullptr);
+	void removeTrack(AnimationTrack *track);
+
 private:
 	QToolBar *m_ToolBar;
 	QToolBar *m_TrackTreeToolBar;
@@ -60,7 +72,15 @@ private:
 	AnimationTimelineEditor *m_TimelineEditor;
 	AnimationCurveEditor *m_CurveEditor;
 	AnimationTimeScrubber *m_TimeScrubber;
-	
+
+	AnimationNode m_RootNode;
+
+private:
+	// Helper functions
+	AnimationNode *findParentNode(AnimationNode *rootNode, AnimationNode *targetNode);
+	void removeTrackFromNode(AnimationNode *node, AnimationTrack *track);
+	void deleteNodeAndChildren(AnimationNode* node);
+
 }; /* class AnimationEditor */
 
 #endif /* ANIMATION_EDITOR__H */

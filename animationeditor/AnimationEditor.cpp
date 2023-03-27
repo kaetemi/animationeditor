@@ -40,10 +40,10 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include "AnimationTimeScrubber.h"
 
 /*
- 
+
 ChatGPT Dump:
 
-- You may want to add icons to the toolbar actions for better visual cues for the users. 
+- You may want to add icons to the toolbar actions for better visual cues for the users.
 To do this, you can use QIcon and set it to the actions with QAction::setIcon().
 
 - In the right layout, you've set both the timeline editor and curve editor to be visible at the same time.
@@ -62,9 +62,9 @@ The layout will automatically be set for the AnimationEditor widget.
 */
 
 AnimationEditor::AnimationEditor(QWidget *parent)
-	: QWidget(parent)
-	, m_ToolBar(new QToolBar(this))
-	, m_TrackTreeToolBar(new QToolBar(this))
+    : QWidget(parent)
+    , m_ToolBar(new QToolBar(this))
+    , m_TrackTreeToolBar(new QToolBar(this))
     , m_TrackTreeView(new QTreeView(this))
     , m_TimelineEditor(new AnimationTimelineEditor(this))
     , m_CurveEditor(new AnimationCurveEditor(this))
@@ -132,6 +132,84 @@ AnimationEditor::AnimationEditor(QWidget *parent)
 
 AnimationEditor::~AnimationEditor()
 {
+}
+
+AnimationNode *AnimationEditor::addNode(AnimationNode *parentNode)
+{
+	AnimationNode *newNode = new AnimationNode;
+	if (parentNode == nullptr) parentNode = &m_RootNode;
+	parentNode->Nodes.append(newNode);
+	// Update the UI, e.g., TreeView
+	return newNode;
+}
+
+AnimationTrack *AnimationEditor::addTrack(AnimationNode *node)
+{
+	AnimationTrack *newTrack = new AnimationTrack(this);
+	if (node == nullptr) node = &m_RootNode;
+	node->Tracks.append(newTrack);
+	// Update the UI, e.g., TreeView
+	return newTrack;
+}
+
+void AnimationEditor::removeNode(AnimationNode* node)
+{
+	// Find the parent node
+	AnimationNode* parentNode = findParentNode(&m_RootNode, node);
+	if (parentNode != nullptr) parentNode->Nodes.removeOne(node);
+
+	// Recursively delete child nodes and tracks
+	deleteNodeAndChildren(node);
+
+	// Update the UI, e.g., TreeView
+}
+
+void AnimationEditor::removeTrack(AnimationTrack *track)
+{
+	removeTrackFromNode(&m_RootNode, track);
+	// Update the UI, e.g., TreeView
+}
+
+AnimationNode *AnimationEditor::findParentNode(AnimationNode *rootNode, AnimationNode *targetNode)
+{
+	for (AnimationNode *childNode : rootNode->Nodes)
+	{
+		if (childNode == targetNode) return rootNode;
+		AnimationNode *parentNode = findParentNode(childNode, targetNode);
+		if (parentNode != nullptr) return parentNode;
+	}
+	return nullptr;
+}
+
+void AnimationEditor::removeTrackFromNode(AnimationNode *node, AnimationTrack *track)
+{
+	if (node->Tracks.removeOne(track))
+	{
+		delete track;
+		return;
+	}
+
+	for (AnimationNode *childNode : node->Nodes)
+	{
+		removeTrackFromNode(childNode, track);
+	}
+}
+
+void AnimationEditor::deleteNodeAndChildren(AnimationNode* node)
+{
+	// Recursively delete child nodes
+	while (!node->Nodes.isEmpty())
+	{
+		AnimationNode* childNode = node->Nodes.takeLast();
+		deleteNodeAndChildren(childNode);
+	}
+
+	// Delete tracks
+	qDeleteAll(node->Tracks);
+	node->Tracks.clear();
+
+	// Delete the node itself
+	delete node;
 }
 
 /* end of file */
