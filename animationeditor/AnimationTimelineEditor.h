@@ -82,24 +82,6 @@ protected:
 	bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
-	QTreeWidget *m_TreeWidget = nullptr;
-	QList<AnimationTrack *> m_AnimationTracks;
-
-	QList<QMap<double, AnimationKeyframe>> m_OriginalAnimationTracks;
-	QSet<ptrdiff_t> m_SelectedKeyframes;
-	QList<ptrdiff_t> m_SelectedKeyframesBackup;
-	ptrdiff_t m_HoverKeyframe;
-
-	bool m_MouseHover = false;
-	QPoint m_MouseMovePosition;
-	QPoint m_TrackMoveStart;
-	QPoint m_SelectionStart;
-
-	// The duration range of the animation timeline
-	double m_FromTime;
-	double m_ToTime;
-
-private:
 	// Paint and layout functions
 	QRect keyframeRect(AnimationTrack *track, double time);
 	void paintEditorBackground(QPainter &painter);
@@ -109,11 +91,37 @@ private:
 	void updateMouseHover(const QPoint &pos);
 	void updateMouseSelection(bool ctrlHeld);
 
-	// Helper function to calculate the X position for a given time
+	// Helper functions
 	int timeToX(double time) const;
-
-	// Helper function to calculate the time for a given X position
 	double xToTime(int x) const;
+
+	// Associated QTreeWidget
+	QTreeWidget *m_TreeWidget = nullptr;
+
+	// List of animation tracks
+	QList<AnimationTrack *> m_AnimationTracks;
+
+	// Original animation tracks backup
+	QList<QMap<double, AnimationKeyframe>> m_OriginalAnimationTracks;
+
+	// Keyframe selection and backup
+	QSet<ptrdiff_t> m_SelectedKeyframes;
+	QList<ptrdiff_t> m_SelectedKeyframesBackup;
+
+	// Hover keyframe
+	ptrdiff_t m_HoverKeyframe;
+
+	// Mouse hover state
+	bool m_MouseHover = false;
+
+	// Mouse move position and related variables
+	QPoint m_MouseMovePosition;
+	QPoint m_TrackMoveStart;
+	QPoint m_SelectionStart;
+
+	// The duration range of the animation timeline
+	double m_FromTime;
+	double m_ToTime;
 
 }; /* class AnimationTimelineEditor */
 
