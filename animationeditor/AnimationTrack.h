@@ -169,6 +169,7 @@ class ANIMATIONEDITOR_EXPORT AnimationTrack : public QObject
 	Q_OBJECT
 
 public:
+	typedef QMap<double, AnimationKeyframe> KeyframeMap;
 	explicit AnimationTrack(QObject *parent = nullptr);
 
 	// Getters
@@ -176,7 +177,7 @@ public:
 	AnimationInterpolation interpolationMethod() const;
 
 	// Setters
-	void setKeyframes(const QMap<double, AnimationKeyframe> &keyframes);
+	void setKeyframes(const KeyframeMap &keyframes);
 	void setInterpolationMethod(AnimationInterpolation interpolationMethod);
 
 	// Keyframe manipulation
@@ -186,6 +187,10 @@ public:
 
 	void setColor(const QColor &color);
 	const QColor &color() const;
+
+	void setRandomColor();
+
+	double valueAtTime(KeyframeMap::const_iterator key0, KeyframeMap::const_iterator key1, double time) const;
 
 signals:
 	void keyframesChanged();
@@ -197,7 +202,7 @@ private:
 	friend AnimationTimelineEditor;
 	friend AnimationCurveEditor;
 
-	QMap<double, AnimationKeyframe> m_Keyframes;
+	KeyframeMap m_Keyframes;
 	AnimationInterpolation m_InterpolationMethod;
 	QTreeWidgetItem *m_TreeWidgetItem;
 	QColor m_Color;

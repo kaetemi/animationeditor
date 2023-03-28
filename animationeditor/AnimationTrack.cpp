@@ -31,6 +31,9 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include "AnimationTrack.h"
 
+#include <QRandomGenerator>
+#include <random>
+
 // Initialize the atomic ID generator
 std::atomic<ptrdiff_t> AnimationKeyframe::s_NextId(0);
 
@@ -38,6 +41,7 @@ AnimationTrack::AnimationTrack(QObject *parent)
     : QObject(parent)
     , m_Keyframes()
     , m_InterpolationMethod(AnimationInterpolation::Linear)
+	, m_Color(Qt::white)
 {
 }
 
@@ -158,6 +162,22 @@ void AnimationTrack::setColor(const QColor &color)
 const QColor &AnimationTrack::color() const
 {
 	return m_Color;
+}
+
+void AnimationTrack::setRandomColor()
+{
+	static QRandomGenerator rng(static_cast<quint64>(static_cast<quint64>(std::random_device()())));
+
+	// Generate a random hue between 0 and 359
+	int hue = rng.generate() % 360;
+
+	// Generate saturation between 80% and 90%
+	int saturation = 80 + rng.generate() % 10;
+
+	// Generate lightness between 60% and 70%
+	int lightness = 60 + rng.generate() % 10;
+
+	setColor(QColor::fromHsl(hue, saturation * 255 / 100, lightness * 255 / 100));
 }
 
 // Bezier to TCB conversion
@@ -283,6 +303,38 @@ void AnimationTrack::convertEaseInOutToTCB(QMap<double, AnimationKeyframe> &keyf
 		keyframe.Interpolation.TCB.Tension = tension;
 		keyframe.Interpolation.TCB.Continuity = continuity;
 		keyframe.Interpolation.TCB.Bias = bias;
+	}
+}
+
+double AnimationTrack::valueAtTime(KeyframeMap::const_iterator key0, KeyframeMap::const_iterator key1, double time) const
+{
+	// If the time is before the first keyframe, return the first keyframe's value
+	if (key0 != m_Keyframes.end() && time < key0.key())
+		return key0.value().Value;
+
+	// If the time is after the second keyframe, return the second keyframe's value
+	if (key1 != m_Keyframes.end() && time > key1.key())
+		return key0.value().Value;
+
+	// If the time is between the two keyframes, interpolate between them
+	if (key0 != m_Keyframes.end() && key1 != m_Keyframes.end())
+	{
+		// If the keyframes are the same, return the value
+		if (key0.key() == key1.key())
+			return key0.value().Value;
+
+		// If the keyframes are not the same, interpolate between them
+		switch (m_InterpolationMethod)
+		{
+		// case AnimationInterpolation::Linear:
+		// 	return interpolateLinear(key0.key(), key0.value(), key1.key(), key1.value(), time);
+		case AnimationInterpolation::Bezier:
+			return interpolateBezier(key0.key(), key0.value(), key1.key(), key1.value(), time);
+		case AnimationInterpolation::TCB:
+			return interpolateTCB(key0.key(), key0.value(), key1.key(), key1.value(), time);
+		case AnimationInterpolation::EaseInOut:
+			return interpolateEaseInOut(key0.key(), key0.value(), key1.key(), key1.value(), time);
+		}
 	}
 }
 

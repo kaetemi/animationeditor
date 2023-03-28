@@ -479,9 +479,43 @@ void AnimationCurveEditor::paintValueRuler(QPainter &painter)
 
 void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, const QColor &curveColor)
 {
-	// Paint the curve for the given track
-	// You'll need to interpolate the curve based on the track's keyframes and interpolation method
+	QPen curvePen = QPen(curveColor);
+	curvePen.setWidthF(1.5);
+	painter.setPen(curvePen);
+
+	const QMap<double, AnimationKeyframe> &keyframes = track->keyframes();
+	QMap<double, AnimationKeyframe>::const_iterator it = keyframes.begin();
+
+	// Check if the track has at least two keyframes
+	if (it != keyframes.end() && (it + 1) != keyframes.end())
+	{
+		bool withinTimeRange = false;
+
+		for (; (it + 1) != keyframes.end(); ++it)
+		{
+			double time1 = it.key();
+			double time2 = (it + 1).key();
+
+			if (!withinTimeRange && time2 >= m_FromTime)
+			{
+				// We are now within the time range
+				withinTimeRange = true;
+			}
+
+			if (withinTimeRange)
+			{
+				// If time1 is beyond the m_ToTime, we can exit the loop early
+				if (time1 > m_ToTime)
+					break;
+
+				QPoint point1 = keyframePoint(time1, it.value().Value);
+				QPoint point2 = keyframePoint(time2, (it + 1).value().Value);
+				painter.drawLine(point1, point2);
+			}
+		}
+	}
 }
+
 
 void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 {
@@ -502,9 +536,11 @@ void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 	for (AnimationTrack *track : m_AnimationTracks)
 	{
 		QColor curveColor = track->color();
+		painter.setRenderHint(QPainter::Antialiasing, true);
 		paintCurve(painter, track, curveColor);
 
 		const QMap<double, AnimationKeyframe> &keyframes = track->keyframes();
+		painter.setRenderHint(QPainter::Antialiasing, false);
 		for (QMap<double, AnimationKeyframe>::const_iterator it = keyframes.begin(); it != keyframes.end(); ++it)
 		{
 			QPoint point = keyframePoint(it.key(), it.value().Value);

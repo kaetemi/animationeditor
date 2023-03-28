@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
 		track2->upsertKeyframe(0.5 + i, 2.0 + i * -0.2);
 		track2->upsertKeyframe(1.5 + i, 3.0 + i * -0.8);
 		track2->upsertKeyframe(2.5 + i, 2.0 + i * -0.4);
+		track2->setRandomColor();
 	}
 
 	mainWindow.resize(900, 400);
