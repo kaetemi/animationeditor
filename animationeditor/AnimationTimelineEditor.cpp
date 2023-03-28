@@ -169,14 +169,16 @@ const QList<AnimationTrack *> &AnimationTimelineEditor::animationTracks() const
 	return m_AnimationTracks;
 }
 
-int AnimationTimelineEditor::timeToX(double time) const
+int AnimationTimelineEditor::timeToX(double time)
 {
-	return static_cast<int>((time - m_FromTime) / (m_ToTime - m_FromTime) * width());
+	QRect rect = rowsRect();
+	return static_cast<int>(round((time - m_FromTime) / (m_ToTime - m_FromTime) * rect.width())) + rect.x();
 }
 
-double AnimationTimelineEditor::xToTime(int x) const
+double AnimationTimelineEditor::xToTime(int x)
 {
-	return m_FromTime + (static_cast<double>(x) / width()) * (m_ToTime - m_FromTime);
+	QRect rect = rowsRect();
+	return m_FromTime + (static_cast<double>(x -  rect.x()) / rect.width()) * (m_ToTime - m_FromTime);
 }
 
 void AnimationTimelineEditor::setKeyframeSelection(const QSet<ptrdiff_t> &selection)
@@ -371,10 +373,13 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 	Q_UNUSED(event);
 
 	QPainter painter(this);
-	// QRect rect = rowsRect();
 
 	// Draw the background
 	paintEditorBackground(painter);
+
+	// Scissor to frame
+	QRect rect = rowsRect();
+	painter.setClipRect(rect);
 
 	// Draw the track backgrounds
 	int lineWidth = (m_TreeWidget ? m_TreeWidget->frameWidth() : 1);

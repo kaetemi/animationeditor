@@ -51,11 +51,66 @@ AnimationInterpolation AnimationTrack::interpolationMethod() const
 	return m_InterpolationMethod;
 }
 
+static bool keyframesEqual(const AnimationKeyframe &k1, const AnimationKeyframe &k2, AnimationInterpolation interpolationMethod)
+{
+	bool baseEquals = k1.Value == k2.Value && k1.Id == k2.Id;
+	if (interpolationMethod == AnimationInterpolation::Bezier)
+	{
+		return baseEquals
+		    && k1.Interpolation.Bezier.InTangentX == k2.Interpolation.Bezier.InTangentX
+		    && k1.Interpolation.Bezier.InTangentY == k2.Interpolation.Bezier.InTangentY
+		    && k1.Interpolation.Bezier.OutTangentX == k2.Interpolation.Bezier.OutTangentX
+		    && k1.Interpolation.Bezier.OutTangentY == k2.Interpolation.Bezier.OutTangentY;
+	}
+	else if (interpolationMethod == AnimationInterpolation::TCB)
+	{
+		return baseEquals
+		    && k1.Interpolation.TCB.Tension == k2.Interpolation.TCB.Tension
+		    && k1.Interpolation.TCB.Continuity == k2.Interpolation.TCB.Continuity
+		    && k1.Interpolation.TCB.Bias == k2.Interpolation.TCB.Bias;
+	}
+	else if (interpolationMethod == AnimationInterpolation::EaseInOut)
+	{
+		return baseEquals
+		    && k1.Interpolation.EaseInOut.EaseIn == k2.Interpolation.EaseInOut.EaseIn
+		    && k1.Interpolation.EaseInOut.EaseOut == k2.Interpolation.EaseInOut.EaseOut;
+	}
+	else
+	{
+		return baseEquals;
+	}
+}
+
+static bool mapsEqual(const QMap<double, AnimationKeyframe> &map1, const QMap<double, AnimationKeyframe> &map2, AnimationInterpolation interpolationMethod)
+{
+	if (map1.size() != map2.size())
+	{
+		return false;
+	}
+
+	QMap<double, AnimationKeyframe>::const_iterator i1 = map1.constBegin();
+	QMap<double, AnimationKeyframe>::const_iterator i2 = map2.constBegin();
+	while (i1 != map1.constEnd() && i2 != map2.constEnd())
+	{
+		if (i1.key() != i2.key() || !keyframesEqual(i1.value(), i2.value(), interpolationMethod))
+		{
+			return false;
+		}
+		++i1;
+		++i2;
+	}
+
+	return true;
+}
+
 void AnimationTrack::setKeyframes(const QMap<double, AnimationKeyframe> &keyframes)
 {
 	// This uses existing keyframes to preserve their IDs
-	m_Keyframes = keyframes;
-	emit keyframesChanged();
+	if (!mapsEqual(m_Keyframes, keyframes, m_InterpolationMethod))
+	{
+		m_Keyframes = keyframes;
+		emit keyframesChanged();
+	}
 }
 
 void AnimationTrack::setInterpolationMethod(AnimationInterpolation interpolationMethod)
@@ -89,6 +144,20 @@ void AnimationTrack::moveKeyframe(double fromTime, double toTime)
 		m_Keyframes.insert(toTime, keyframe);
 		emit keyframesChanged();
 	}
+}
+
+void AnimationTrack::setColor(const QColor &color)
+{
+	if (m_Color != color)
+	{
+		m_Color = color;
+		emit colorChanged();
+	}
+}
+
+const QColor &AnimationTrack::color() const
+{
+	return m_Color;
 }
 
 // Bezier to TCB conversion
@@ -311,7 +380,7 @@ void AnimationTrack::convertInterpolation(QMap<double, AnimationKeyframe> &keyfr
 	{
 		switch (from)
 		{
-		case AnimationInterpolation::TensionContinuityBias:
+		case AnimationInterpolation::TCB:
 			convertTCBToBezier(keyframes);
 			break;
 		case AnimationInterpolation::EaseInOut:
@@ -337,7 +406,7 @@ void AnimationTrack::convertInterpolation(QMap<double, AnimationKeyframe> &keyfr
 	{
 		switch (to)
 		{
-		case AnimationInterpolation::TensionContinuityBias:
+		case AnimationInterpolation::TCB:
 			convertBezierToTCB(keyframes);
 			break;
 		case AnimationInterpolation::EaseInOut:

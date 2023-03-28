@@ -36,16 +36,105 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include "AnimationEditorGlobal.h"
 
 #include <QWidget>
+#include <QSet>
+#include <QRect>
 
-class ANIMATIONEDITOR_EXPORT AnimationCurveEditor : public QWidget
+#include "AnimationTrack.h"
+
+class QTreeWidget;
+
+class AnimationCurveEditor : public QWidget
 {
 	Q_OBJECT
 
 public:
-	AnimationCurveEditor(QWidget *parent);
+	explicit AnimationCurveEditor(QWidget *parent, QTreeWidget *dimensionalReference);
 	virtual ~AnimationCurveEditor();
-	
-}; /* class AnimationCurveEditor */
+
+	// Set and get the animation tracks
+	void setAnimationTracks(const QList<AnimationTrack *> &tracks);
+	const QList<AnimationTrack *> &animationTracks() const;
+
+	// Set and get the keyframe selection
+	void setKeyframeSelection(const QSet<ptrdiff_t> &selection);
+	QSet<ptrdiff_t> keyframeSelection() const;
+
+signals:
+	void rangeChanged(double fromTime, double toTime);
+	void trackRemoved(AnimationTrack *track);
+	void trackChanged(AnimationTrack *track);
+	void selectionChanged(const QSet<ptrdiff_t> &selection);
+
+protected:
+	// Override paintEvent to customize drawing
+	void paintEvent(QPaintEvent *event) override;
+
+	// Additional event handlers for mouse interactions
+	void mousePressEvent(QMouseEvent *event) override;
+	void mouseMoveEvent(QMouseEvent *event) override;
+	void mouseReleaseEvent(QMouseEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
+	void enterEvent(QEnterEvent *event) override;
+	void leaveEvent(QEvent *event) override;
+	bool eventFilter(QObject *watched, QEvent *event) override;
+	void contextMenuEvent(QContextMenuEvent *event) override;
+
+private:
+	// Enum for user interaction state
+	enum class InteractionState
+	{
+		SelectMove,
+		SelectOnly,
+		MoveOnly,
+		MultiSelect
+	};
+
+	// Utility functions for working with keyframes and control points
+	QRect gridRect() const;
+	QPoint keyframePoint(double time, double value) const;
+	AnimationTrack *trackAtPosition(const QPoint &pos) const;
+	AnimationKeyframe keyframeAtPosition(const AnimationTrack *track, const QPoint &pos) const;
+
+	// Paint and layout helper functions
+	void paintEditorBackground(QPainter &painter);
+	void paintGrid(QPainter &painter);
+	void paintValueRuler(QPainter &painter);
+	void paintCurve(QPainter &painter, AnimationTrack *track, const QColor &curveColor);
+	void paintKeyframe(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active);
+
+	// Context menu management
+	void createContextMenu();
+	void removeTrack();
+	void addKeyframe();
+	void removeKeyframe();
+	void onContextMenuClosed();
+
+	// Mouse interaction helper functions
+	void updateMouseHover(const QPoint &pos);
+	void updateMouseSelection(bool ctrlHeld);
+
+private:
+	QTreeWidget *m_DimensionalReference;
+	QList<AnimationTrack *> m_AnimationTracks;
+	InteractionState m_InteractionState;
+	QSet<ptrdiff_t> m_SelectedKeyframes;
+	QSet<ptrdiff_t> m_SelectedLeftInterpolationHandles;
+	QSet<ptrdiff_t> m_SelectedRightInterpolationHandles;
+
+	// Grid
+	double m_HorizontalPrimaryTimeInterval = 1.0;
+	double m_HorizontalSecondaryTimeInterval = 0.1;
+	double m_VerticalPrimaryValueInterval = 1.0;
+	double m_VerticalSecondaryValueInterval = 0.1;
+
+	// Scale
+	double m_VerticalCenterValue = 0;
+	double m_VerticalPixelPerValue = 400.0 / 10.0;
+	double m_FromTime = 0.0;
+	double m_ToTime = 10.0;
+
+};
+
 
 #endif /* ANIMATION_CURVE_EDITOR__H */
 

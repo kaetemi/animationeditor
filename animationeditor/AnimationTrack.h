@@ -46,6 +46,7 @@ multiple interpolation methods for smooth transitions between keyframes.
 
 #include <QObject>
 #include <QMap>
+#include <QColor>
 
 #include <atomic>
 
@@ -61,7 +62,7 @@ enum class AnimationInterpolation
 	Step,
 	Linear,
 	Bezier,
-	TensionContinuityBias,
+	TCB,
 	EaseInOut,
 };
 
@@ -183,9 +184,13 @@ public:
 	void removeKeyframe(double time);
 	void moveKeyframe(double fromTime, double toTime);
 
+	void setColor(const QColor &color);
+	const QColor &color() const;
+
 signals:
 	void keyframesChanged();
 	void interpolationMethodChanged();
+	void colorChanged();
 
 private:
 	friend AnimationEditor;
@@ -195,6 +200,7 @@ private:
 	QMap<double, AnimationKeyframe> m_Keyframes;
 	AnimationInterpolation m_InterpolationMethod;
 	QTreeWidgetItem *m_TreeWidgetItem;
+	QColor m_Color;
 
 	static void convertBezierToTCB(QMap<double, AnimationKeyframe> &keyframes);
 	static void convertTCBToBezier(QMap<double, AnimationKeyframe> &keyframes);

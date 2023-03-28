@@ -118,15 +118,15 @@ private:
 	AnimationTrack *trackAtPosition(const QPoint &pos);
 	ptrdiff_t keyframeAtPosition(AnimationTrack *track, const QPoint &pos);
 	void paintEditorBackground(QPainter &painter);
-	void paintKeyframe(QPainter &painter, const QRect &keyframeRect, bool isSelected, bool isHovered, bool isPressed);
+	void paintKeyframe(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active);
 
 	// Mouse updates
 	void updateMouseHover(const QPoint &pos);
 	void updateMouseSelection(bool ctrlHeld);
 
 	// Helper functions
-	int timeToX(double time) const;
-	double xToTime(int x) const;
+	int timeToX(double time);
+	double xToTime(int x);
 
 	// Context menu actions
 	QMenu *m_ContextMenu = nullptr;

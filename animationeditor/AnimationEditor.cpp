@@ -70,7 +70,7 @@ AnimationEditor::AnimationEditor(QWidget *parent)
     , m_TrackTreeToolBar(new QToolBar(this))
     , m_TrackTreeWidget(new QTreeWidget(this))
     , m_TimelineEditor(new AnimationTimelineEditor(this))
-    , m_CurveEditor(new AnimationCurveEditor(this))
+    , m_CurveEditor(new AnimationCurveEditor(this, m_TrackTreeWidget))
     , m_TimeScrubber(new AnimationTimeScrubber(this))
 {
 	// Set up the toolbar
@@ -118,7 +118,8 @@ AnimationEditor::AnimationEditor(QWidget *parent)
 	rightLayout->addWidget(m_TimeScrubber);
 	rightLayout->addWidget(m_TimelineEditor);
 	rightLayout->addWidget(m_CurveEditor);
-	m_CurveEditor->setVisible(false);
+	m_TimelineEditor->setVisible(false);
+	// m_CurveEditor->setVisible(false);
 	rightWidget->setLayout(rightLayout);
 	splitter->addWidget(rightWidget);
 
@@ -281,6 +282,7 @@ void AnimationEditor::updateTimelineTracks()
 	QList<AnimationTrack *> tracks;
 	listTimelineTracks(tracks, &m_RootNode);
 	m_TimelineEditor->setAnimationTracks(tracks);
+	m_CurveEditor->setAnimationTracks(tracks);
 }
 
 void AnimationEditor::listTimelineTracks(QList<AnimationTrack *> &tracks, AnimationNode *node)
