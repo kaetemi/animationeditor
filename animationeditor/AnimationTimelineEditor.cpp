@@ -106,29 +106,25 @@ void AnimationTimelineEditor::contextMenuEvent(QContextMenuEvent *event)
 			return;
 		}
 		bool ctrlHeld = event->modifiers() & Qt::ControlModifier;
-		for (QMap<double, AnimationKeyframe>::const_iterator keyframe = m_ContextMenuTrack->keyframes().begin(); keyframe != m_ContextMenuTrack->keyframes().end(); ++keyframe)
+		ptrdiff_t contextKeyframe = keyframeAtPosition(m_ContextMenuTrack, pos);
+		if (contextKeyframe != -1)
 		{
-			QRect keyframeRect = this->keyframeRect(m_ContextMenuTrack, keyframe.key());
-			if (keyframeRect.contains(event->pos()))
+			if (ctrlHeld)
 			{
-				if (ctrlHeld)
-				{
-					// Add the keyframe to the selection
-					m_SelectedKeyframes.insert(keyframe.value().Id);
-				}
-				else
-				{
-					// If the keyframe is not already selected, clear the selection and select the new keyframe
-					if (!m_SelectedKeyframes.contains(keyframe.value().Id))
-					{
-						m_SelectedKeyframes = { keyframe.value().Id };
-					}
-				}
-				m_HoverKeyframe = -1;
-				m_HoverTrack = nullptr;
-				emit selectionChanged(m_SelectedKeyframes);
-				break;
+				// Add the keyframe to the selection
+				m_SelectedKeyframes.insert(contextKeyframe);
 			}
+			else
+			{
+				// If the keyframe is not already selected, clear the selection and select the new keyframe
+				if (!m_SelectedKeyframes.contains(contextKeyframe))
+				{
+					m_SelectedKeyframes = { contextKeyframe };
+				}
+			}
+			m_HoverKeyframe = -1;
+			m_HoverTrack = nullptr;
+			emit selectionChanged(m_SelectedKeyframes);
 		}
 	}
 
@@ -437,6 +433,32 @@ QRect AnimationTimelineEditor::keyframeRect(AnimationTrack *track, double time)
 	return keyframeRect;
 }
 
+AnimationTrack *AnimationTimelineEditor::trackAtPosition(const QPoint &pos)
+{
+	for (AnimationTrack *track : m_AnimationTracks)
+	{
+		QRect trackRect = visualTrackRectInWidgetSpace(track);
+		if (trackRect.contains(pos))
+		{
+			return track;
+		}
+	}
+	return nullptr;
+}
+
+ptrdiff_t AnimationTimelineEditor::keyframeAtPosition(AnimationTrack *track, const QPoint &pos)
+{
+	for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
+	{
+		QRect keyframeRect = this->keyframeRect(track, keyframe.key());
+		if (keyframeRect.contains(pos))
+		{
+			return keyframe.value().Id;
+		}
+	}
+	return -1;
+}
+
 void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 {
 	m_SkipContextMenu = false;
@@ -455,44 +477,42 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 		bool clickedKeyframe = false;
 
 		// Find the clicked keyframe
-		for (AnimationTrack *track : m_AnimationTracks)
+		AnimationTrack *clickedTrack = trackAtPosition(event->pos());
+		if (clickedTrack)
 		{
-			QRect trackRect = visualTrackRectInWidgetSpace(track);
-			if (trackRect.contains(event->pos()))
+			if (clickedTrack)
 			{
-				for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
+				// Find the clicked keyframe
+				ptrdiff_t clickedKeyframeId = keyframeAtPosition(clickedTrack, event->pos());
+
+				if (clickedKeyframeId != -1)
 				{
-					QRect keyframeRect = this->keyframeRect(track, keyframe.key());
-					if (keyframeRect.contains(event->pos()))
+					if (ctrlHeld)
 					{
-						if (ctrlHeld)
+						// If the keyframe is already selected, deselect it
+						if (m_SelectedKeyframes.contains(clickedKeyframeId))
 						{
-							// If the keyframe is already selected, deselect it
-							if (m_SelectedKeyframes.contains(keyframe.value().Id))
-							{
-								m_SelectedKeyframes.remove(keyframe.value().Id);
-							}
-							else
-							{
-								// Add the keyframe to the selection
-								m_SelectedKeyframes.insert(keyframe.value().Id);
-							}
+							m_SelectedKeyframes.remove(clickedKeyframeId);
 						}
 						else
 						{
-							// If the keyframe is not already selected, clear the selection and select the new keyframe
-							if (!m_SelectedKeyframes.contains(keyframe.value().Id))
-							{
-								m_SelectedKeyframes = { keyframe.value().Id };
-							}
+							// Add the keyframe to the selection
+							m_SelectedKeyframes.insert(clickedKeyframeId);
 						}
-						m_HoverKeyframe = -1;
-						m_HoverTrack = nullptr;
-						m_PressedKeyframe = keyframe.value().Id;
-						clickedKeyframe = true;
-						emit selectionChanged(m_SelectedKeyframes);
-						break;
 					}
+					else
+					{
+						// If the keyframe is not already selected, clear the selection and select the new keyframe
+						if (!m_SelectedKeyframes.contains(clickedKeyframeId))
+						{
+							m_SelectedKeyframes = { clickedKeyframeId };
+						}
+					}
+					m_HoverKeyframe = -1;
+					m_HoverTrack = nullptr;
+					m_PressedKeyframe = clickedKeyframeId;
+					clickedKeyframe = true;
+					emit selectionChanged(m_SelectedKeyframes);
 				}
 			}
 		}
@@ -522,25 +542,11 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 		{
 			// QRect rect = rowsRect();
 			QPoint pos = event->pos();
-			AnimationTrack *currentTrack = nullptr;
+			AnimationTrack *currentTrack = trackAtPosition(pos);
 			ptrdiff_t currentKeyframe = -1;
-			for (AnimationTrack *track : m_AnimationTracks)
+			if (currentTrack)
 			{
-				QRect trackRect = visualTrackRectInWidgetSpace(track);
-				if (trackRect.contains(pos))
-				{
-					currentTrack = track;
-					for (QMap<double, AnimationKeyframe>::const_iterator keyframe = currentTrack->keyframes().begin(); keyframe != currentTrack->keyframes().end(); ++keyframe)
-					{
-						QRect keyframeRect = this->keyframeRect(currentTrack, keyframe.key());
-						if (keyframeRect.contains(event->pos()))
-						{
-							currentKeyframe = keyframe.value().Id;
-							break;
-						}
-					}
-					break;
-				}
+				currentKeyframe = keyframeAtPosition(currentTrack, pos);
 			}
 			m_RightPressedKeyframe = currentKeyframe;
 			m_CurrentHoverKeyframe = currentKeyframe;
@@ -673,23 +679,10 @@ void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 	// Find the hovered keyframe
 	// QRect rect = rowsRect();
 	ptrdiff_t hoverKeyframe = -1;
-	AnimationTrack *hoverTrack = nullptr;
-	for (AnimationTrack *track : m_AnimationTracks)
+	AnimationTrack *hoverTrack = trackAtPosition(pos);
+	if (hoverTrack)
 	{
-		QRect trackRect = visualTrackRectInWidgetSpace(track);
-		if (trackRect.contains(pos))
-		{
-			hoverTrack = track;
-			for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
-			{
-				QRect keyframeRect = this->keyframeRect(track, keyframe.key());
-				if (keyframeRect.contains(pos))
-				{
-					hoverKeyframe = keyframe.value().Id;
-					break;
-				}
-			}
-		}
+		hoverKeyframe = keyframeAtPosition(hoverTrack, pos);
 	}
 	if (m_HoverKeyframe != hoverKeyframe || (m_SelectionStart.isNull() && m_HoverTrack != hoverTrack))
 	{

@@ -112,11 +112,13 @@ private:
 	void createContextMenu();
 
 	// Paint and layout functions
+	QRect rowsRect();
 	QRect visualTrackRectInWidgetSpace(AnimationTrack *track);
 	QRect keyframeRect(AnimationTrack *track, double time);
+	AnimationTrack *trackAtPosition(const QPoint &pos);
+	ptrdiff_t keyframeAtPosition(AnimationTrack *track, const QPoint &pos);
 	void paintEditorBackground(QPainter &painter);
 	void paintKeyframe(QPainter &painter, const QRect &keyframeRect, bool isSelected, bool isHovered, bool isPressed);
-	QRect rowsRect();
 
 	// Mouse updates
 	void updateMouseHover(const QPoint &pos);
