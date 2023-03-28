@@ -112,6 +112,7 @@ private:
 	void createContextMenu();
 
 	// Paint and layout functions
+	QRect visualTrackRectInWidgetSpace(AnimationTrack *track);
 	QRect keyframeRect(AnimationTrack *track, double time);
 	void paintEditorBackground(QPainter &painter);
 	void paintKeyframe(QPainter &painter, const QRect &keyframeRect, bool isSelected, bool isHovered, bool isPressed);

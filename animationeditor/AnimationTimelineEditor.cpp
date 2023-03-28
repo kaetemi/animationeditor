@@ -99,12 +99,8 @@ void AnimationTimelineEditor::contextMenuEvent(QContextMenuEvent *event)
 
 	if (m_ContextMenuTrack)
 	{
-		QRect rect = rowsRect();
 		QPoint pos = event->pos();
-		QRect trackRect = visualTrackRect(m_ContextMenuTrack);
-		trackRect.setY(trackRect.y() + rect.y());
-		trackRect.setLeft(rect.left());
-		trackRect.setRight(rect.right());
+		QRect trackRect = visualTrackRectInWidgetSpace(m_ContextMenuTrack);
 		if (!trackRect.contains(pos))
 		{
 			return;
@@ -213,6 +209,17 @@ QRect AnimationTimelineEditor::visualTrackRect(AnimationTrack *track) const
 	return rect;
 }
 
+QRect AnimationTimelineEditor::visualTrackRectInWidgetSpace(AnimationTrack *track)
+{
+	QRect rect = rowsRect();
+	QRect trackRect = visualTrackRect(track);
+
+	if (trackRect.isEmpty())
+		return QRect();
+
+	return QRect(rect.x(), rect.y() + trackRect.y(), rect.width(), trackRect.height());
+}
+
 QRect AnimationTimelineEditor::rowsRect()
 {
 	// Find tree view if we haven't already
@@ -278,7 +285,7 @@ static QColor lerp(const QColor &color1, const QColor &color2, qreal t)
 void AnimationTimelineEditor::paintKeyframe(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active)
 {
 	// Adjust the keyframe size
-	QRect adjustedRect = rect.adjusted(2, 2, 0, 0);
+	QRect adjustedRect = rect.adjusted(2, 2, -1, -1);
 
 	// Path
 	QPointF top = QPointF((adjustedRect.left() + adjustedRect.right()) / 2.0, adjustedRect.top());
@@ -368,7 +375,7 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 	Q_UNUSED(event);
 
 	QPainter painter(this);
-	QRect rect = rowsRect();
+	// QRect rect = rowsRect();
 
 	// Draw the background
 	paintEditorBackground(painter);
@@ -378,10 +385,10 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 	for (int i = 0; i < m_AnimationTracks.size(); ++i)
 	{
 		AnimationTrack *track = m_AnimationTracks[i];
-		QRect trackRect = visualTrackRect(track);
+		QRect trackRect = visualTrackRectInWidgetSpace(track);
 		if (trackRect.isEmpty())
 			continue;
-		trackRect = QRect(rect.x(), trackRect.y() + rect.y() + lineWidth, rect.width(), trackRect.height() - (lineWidth * 2));
+		trackRect = QRect(trackRect.x(), trackRect.y() + lineWidth, trackRect.width(), trackRect.height() - (lineWidth * 2));
 
 		// Draw the track background
 		QBrush trackBackgroundBrush = palette().brush(QPalette::AlternateBase);
@@ -398,7 +405,7 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 		QPen separatorPen(trackBackgroundBrush.color().lighter(105));
 		separatorPen.setWidthF(1.0);
 		painter.setPen(separatorPen);
-		painter.drawLine(rect.x(), trackRect.y() - 1, rect.right(), trackRect.y() - 1);
+		painter.drawLine(trackRect.left(), trackRect.y() - 1, trackRect.right(), trackRect.y() - 1);
 
 		// Draw keyframes
 		for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
@@ -423,12 +430,7 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 
 QRect AnimationTimelineEditor::keyframeRect(AnimationTrack *track, double time)
 {
-	QRect rect = rowsRect();
-	QRect trackRect = visualTrackRect(track);
-	trackRect.setY(trackRect.y() + rect.y());
-	trackRect.setLeft(rect.left());
-	trackRect.setRight(rect.right());
-
+	QRect trackRect = visualTrackRectInWidgetSpace(track);
 	int keyframeX = timeToX(time);
 	int keyframeWidth = trackRect.height(); // Set the keyframe width to match the track height
 	QRect keyframeRect(keyframeX - keyframeWidth / 2, trackRect.y(), keyframeWidth, trackRect.height());
@@ -455,7 +457,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 		// Find the clicked keyframe
 		for (AnimationTrack *track : m_AnimationTracks)
 		{
-			QRect trackRect = visualTrackRect(track);
+			QRect trackRect = visualTrackRectInWidgetSpace(track);
 			if (trackRect.contains(event->pos()))
 			{
 				for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
@@ -518,16 +520,13 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 	{
 		if (m_SelectionStart.isNull() && m_TrackMoveStart.isNull())
 		{
-			QRect rect = rowsRect();
+			// QRect rect = rowsRect();
 			QPoint pos = event->pos();
 			AnimationTrack *currentTrack = nullptr;
 			ptrdiff_t currentKeyframe = -1;
 			for (AnimationTrack *track : m_AnimationTracks)
 			{
-				QRect trackRect = visualTrackRect(track);
-				trackRect.setY(trackRect.y() + rect.y());
-				trackRect.setLeft(rect.left());
-				trackRect.setRight(rect.right());
+				QRect trackRect = visualTrackRectInWidgetSpace(track);
 				if (trackRect.contains(pos))
 				{
 					currentTrack = track;
@@ -585,7 +584,7 @@ void AnimationTimelineEditor::updateMouseSelection(bool ctrlHeld)
 
 		for (AnimationTrack *track : m_AnimationTracks)
 		{
-			QRect trackRect = visualTrackRect(track);
+			QRect trackRect = visualTrackRectInWidgetSpace(track);
 			for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 			{
 				QRect keyframeRect = this->keyframeRect(track, keyframe.key());
@@ -672,15 +671,12 @@ void AnimationTimelineEditor::leaveEvent(QEvent *event)
 void AnimationTimelineEditor::updateMouseHover(const QPoint &pos)
 {
 	// Find the hovered keyframe
-	QRect rect = rowsRect();
+	// QRect rect = rowsRect();
 	ptrdiff_t hoverKeyframe = -1;
 	AnimationTrack *hoverTrack = nullptr;
 	for (AnimationTrack *track : m_AnimationTracks)
 	{
-		QRect trackRect = visualTrackRect(track);
-		trackRect.setY(trackRect.y() + rect.y());
-		trackRect.setLeft(rect.left());
-		trackRect.setRight(rect.right());
+		QRect trackRect = visualTrackRectInWidgetSpace(track);
 		if (trackRect.contains(pos))
 		{
 			hoverTrack = track;
