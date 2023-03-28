@@ -67,6 +67,7 @@ signals:
 
 protected:
 	// Override paintEvent to customize drawing
+	void resizeEvent(QResizeEvent *event) override;
 	void paintEvent(QPaintEvent *event) override;
 
 	// Additional event handlers for mouse interactions

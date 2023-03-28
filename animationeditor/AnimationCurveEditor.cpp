@@ -190,23 +190,9 @@ void AnimationCurveEditor::recalculateGridInverval()
 {
 	QRect grid = gridRect();
 
-	/*
-	double m_HorizontalPrimaryTimeInterval = 1.0;
-	double m_HorizontalSecondaryTimeInterval = 0.1;
-	double m_VerticalPrimaryValueInterval = 1.0;
-	double m_VerticalSecondaryValueInterval = 0.1;
-	*/
-
 	double targetPixelsPerPrimary = 100.0; // Target pixels per primary
 	double pixelsPerValue = m_VerticalPixelPerValue;
-	double pixelsPerSecond = grid.width() / (m_ToTime - m_FromTime);
-
-	/*
-	double m_VerticalCenterValue = 0;
-	double m_VerticalPixelPerValue = 400.0 / 10.0;
-	double m_FromTime = 0.0;
-	double m_ToTime = 10.0;
-	*/
+	double pixelsPerTime = grid.width() / (m_ToTime - m_FromTime);
 
 	double primaryValueInterval = targetPixelsPerPrimary / pixelsPerValue;
 	primaryValueInterval = pow(10, round(log10(primaryValueInterval)));
@@ -217,7 +203,39 @@ void AnimationCurveEditor::recalculateGridInverval()
 	m_VerticalPrimaryValueInterval = primaryValueInterval;
 	m_VerticalSecondaryValueInterval = primaryValueInterval * 0.1;
 
+	double pixelsPerSecond = pixelsPerTime;
+	double pixelsPerMinute = pixelsPerSecond * 60.0;
+	double pixelsPerHour = pixelsPerSecond * 3600.0;
+	double pixelsPerDay = pixelsPerSecond * 86400.0;
+
+	double timeMultiplier = 1.0;
+	if (abs(pixelsPerSecond - targetPixelsPerPrimary) > abs(pixelsPerMinute - targetPixelsPerPrimary))
+	{
+		timeMultiplier = 60.0;
+		if (abs(pixelsPerMinute - targetPixelsPerPrimary) > abs(pixelsPerHour - targetPixelsPerPrimary))
+		{
+			timeMultiplier = 3600.0;
+			if (abs(pixelsPerHour - targetPixelsPerPrimary) > abs(pixelsPerDay - targetPixelsPerPrimary))
+				timeMultiplier = 86400.0;
+		}
+	}
+	pixelsPerTime *= timeMultiplier;
+	double primaryTimeInterval = targetPixelsPerPrimary / pixelsPerTime;
+	primaryTimeInterval = pow(10, round(log10(primaryTimeInterval)));
+	if (abs(pixelsPerTime * primaryTimeInterval - targetPixelsPerPrimary) > abs(pixelsPerTime * primaryTimeInterval * 2.0 - targetPixelsPerPrimary))
+		primaryTimeInterval *= 2.0;
+	else if (abs(pixelsPerTime * primaryTimeInterval - targetPixelsPerPrimary) > abs(pixelsPerTime * primaryTimeInterval * 0.5 - targetPixelsPerPrimary))
+		primaryTimeInterval *= 0.5;
+	m_HorizontalPrimaryTimeInterval = primaryTimeInterval * timeMultiplier;
+	m_HorizontalSecondaryTimeInterval = primaryTimeInterval * timeMultiplier * 0.1;
+
 	update();
+}
+
+void AnimationCurveEditor::resizeEvent(QResizeEvent *event)
+{
+	QWidget::resizeEvent(event);
+	recalculateGridInverval();
 }
 
 void AnimationCurveEditor::paintEditorBackground(QPainter &painter)
