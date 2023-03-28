@@ -36,7 +36,9 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QTreeWidget>
 #include <QPainterPath>
 
-AnimationCurveEditor::AnimationCurveEditor(QWidget *parent, QTreeWidget *dimensionalReference) : QWidget(parent), m_DimensionalReference(dimensionalReference)
+AnimationCurveEditor::AnimationCurveEditor(QWidget *parent, QTreeWidget *dimensionalReference)
+    : QWidget(parent)
+    , m_DimensionalReference(dimensionalReference)
 {
 }
 
@@ -274,8 +276,75 @@ void AnimationCurveEditor::paintKeyframe(QPainter &painter, const QRect &rect, b
 
 void AnimationCurveEditor::paintGrid(QPainter &painter)
 {
-	// Paint the grid background with primary control lines and light grid lines
 	QRect grid = gridRect();
+
+	QColor baseColor = palette().color(QPalette::Base);
+	QPen secondaryLightPen = QPen(baseColor.lighter(110));
+	QPen secondaryDarkPen = QPen(baseColor.darker(110));
+	QPen primaryLightPen = QPen(baseColor.lighter(150));
+	QPen primaryDarkPen = QPen(baseColor.darker(150));
+
+	// Draw horizontal secondary grid lines
+	double minValue = m_VerticalCenterValue - ((grid.height() / 2.0) / m_VerticalPixelPerValue);
+	double maxValue = m_VerticalCenterValue + ((grid.height() / 2.0) / m_VerticalPixelPerValue);
+	minValue = floor(minValue / m_VerticalPrimaryValueInterval) * m_VerticalPrimaryValueInterval;
+	maxValue = ceil(maxValue / m_VerticalPrimaryValueInterval) * m_VerticalPrimaryValueInterval;
+
+	for (double value = minValue; value <= maxValue; value += m_VerticalPrimaryValueInterval)
+	{
+		for (double secondaryValue = value + m_VerticalSecondaryValueInterval; secondaryValue <= (value + m_VerticalPrimaryValueInterval - (m_VerticalSecondaryValueInterval / 2.0)); secondaryValue += m_VerticalSecondaryValueInterval)
+		{
+			QPoint startPoint = keyframePoint(m_FromTime, secondaryValue);
+			QPoint endPoint = keyframePoint(m_ToTime, secondaryValue);
+			QPoint offset = QPoint(0, -1);
+			painter.setPen(secondaryDarkPen);
+			painter.drawLine(startPoint + offset, endPoint + offset);
+			painter.setPen(secondaryLightPen);
+			painter.drawLine(startPoint, endPoint);
+		}
+	}
+
+	// Draw vertical secondary grid lines
+	double startTime = floor(m_FromTime / m_HorizontalPrimaryTimeInterval) * m_HorizontalPrimaryTimeInterval;
+	double endTime = ceil(m_ToTime / m_HorizontalPrimaryTimeInterval) * m_HorizontalPrimaryTimeInterval;
+
+	for (double time = startTime; time <= endTime; time += m_HorizontalPrimaryTimeInterval)
+	{
+		for (double secondaryTime = time + m_HorizontalSecondaryTimeInterval; secondaryTime <= (time + m_HorizontalPrimaryTimeInterval - (m_HorizontalSecondaryTimeInterval / 2.0)); secondaryTime += m_HorizontalSecondaryTimeInterval)
+		{
+			QPoint startPoint = keyframePoint(secondaryTime, minValue);
+			QPoint endPoint = keyframePoint(secondaryTime, maxValue);
+			QPoint offset = QPoint(-1, 0);
+			painter.setPen(secondaryDarkPen);
+			painter.drawLine(startPoint + offset, endPoint + offset);
+			painter.setPen(secondaryLightPen);
+			painter.drawLine(startPoint, endPoint);
+		}
+	}
+
+	// Draw horizontal primary grid lines
+	for (double value = minValue; value <= maxValue; value += m_VerticalPrimaryValueInterval)
+	{
+		QPoint startPoint = keyframePoint(m_FromTime, value);
+		QPoint endPoint = keyframePoint(m_ToTime, value);
+		QPoint offset = QPoint(0, -1);
+		painter.setPen(primaryDarkPen);
+		painter.drawLine(startPoint + offset, endPoint + offset);
+		painter.setPen(primaryLightPen);
+		painter.drawLine(startPoint, endPoint);
+	}
+
+	// Draw vertical primary grid lines
+	for (double time = startTime; time <= endTime; time += m_HorizontalPrimaryTimeInterval)
+	{
+		QPoint startPoint = keyframePoint(time, minValue);
+		QPoint endPoint = keyframePoint(time, maxValue);
+		QPoint offset = QPoint(-1, 0);
+		painter.setPen(primaryDarkPen);
+		painter.drawLine(startPoint + offset, endPoint + offset);
+		painter.setPen(primaryLightPen);
+		painter.drawLine(startPoint, endPoint);
+	}
 }
 
 void AnimationCurveEditor::paintValueRuler(QPainter &painter)
@@ -285,8 +354,8 @@ void AnimationCurveEditor::paintValueRuler(QPainter &painter)
 	// Calculate the range of values to be displayed
 	double minValue = m_VerticalCenterValue - ((grid.height() / 2.0) / m_VerticalPixelPerValue);
 	double maxValue = m_VerticalCenterValue + ((grid.height() / 2.0) / m_VerticalPixelPerValue);
-	minValue = floor(minValue / m_VerticalPrimaryValueInterval) *m_VerticalPrimaryValueInterval;
-	maxValue = ceil(maxValue / m_VerticalPrimaryValueInterval) *m_VerticalPrimaryValueInterval;
+	minValue = floor(minValue / m_VerticalPrimaryValueInterval) * m_VerticalPrimaryValueInterval;
+	maxValue = ceil(maxValue / m_VerticalPrimaryValueInterval) * m_VerticalPrimaryValueInterval;
 
 	QColor baseColor = palette().color(QPalette::Base);
 	QPen lightPen = QPen(baseColor.lighter(200));

@@ -75,9 +75,9 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < 10; ++i)
 	{
 		AnimationTrack *track2 = animationEditor->addTrack();
-		track2->upsertKeyframe(0.5 + i, 2.0);
-		track2->upsertKeyframe(1.5 + i, 3.0);
-		track2->upsertKeyframe(2.5 + i, 2.0);
+		track2->upsertKeyframe(0.5 + i, 2.0 + i * -0.2);
+		track2->upsertKeyframe(1.5 + i, 3.0 + i * -0.8);
+		track2->upsertKeyframe(2.5 + i, 2.0 + i * -0.4);
 	}
 
 	mainWindow.resize(900, 400);
