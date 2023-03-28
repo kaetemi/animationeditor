@@ -448,12 +448,16 @@ AnimationTrack *AnimationTimelineEditor::trackAtPosition(const QPoint &pos)
 
 ptrdiff_t AnimationTimelineEditor::keyframeAtPosition(AnimationTrack *track, const QPoint &pos)
 {
-	for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
+	if (!track)
+		return -1;
+	const QMap<double, AnimationKeyframe> &keyframes = track->keyframes();
+	for (QMap<double, AnimationKeyframe>::const_iterator it = keyframes.constEnd(); it != keyframes.constBegin();)
 	{
-		QRect keyframeRect = this->keyframeRect(track, keyframe.key());
+		--it;
+		QRect keyframeRect = this->keyframeRect(track, it.key());
 		if (keyframeRect.contains(pos))
 		{
-			return keyframe.value().Id;
+			return it.value().Id;
 		}
 	}
 	return -1;
