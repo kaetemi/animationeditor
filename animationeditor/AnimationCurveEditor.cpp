@@ -40,6 +40,7 @@ AnimationCurveEditor::AnimationCurveEditor(QWidget *parent, QTreeWidget *dimensi
     : QWidget(parent)
     , m_DimensionalReference(dimensionalReference)
 {
+	recalculateGridInverval();
 }
 
 AnimationCurveEditor::~AnimationCurveEditor()
@@ -86,7 +87,33 @@ void AnimationCurveEditor::mouseReleaseEvent(QMouseEvent *event)
 
 void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 {
-	// Implement wheel event handling
+	double scrollAmount = event->angleDelta().y() / 8.0;
+	double scaleFactor = 1 + scrollAmount / 120.0;
+
+	// Change m_VerticalPixelPerValue when there are no key modifiers
+	if (event->modifiers() == Qt::NoModifier)
+	{
+		m_VerticalPixelPerValue *= scaleFactor;
+		recalculateGridInverval(); // Redraw the widget
+	}
+	// Change the from/to time range when the Shift key is held
+	else if (event->modifiers() == Qt::ShiftModifier)
+	{
+		double timeRange = m_ToTime - m_FromTime;
+
+		// Calculate the time at the mouse position
+		double mouseTime = timeAtX(event->position().x());
+
+		// Scale the time range around the mouse position
+		double newTimeRange = timeRange * scaleFactor;
+		double timeDiff = newTimeRange - timeRange;
+		double timeDiffRatio = (mouseTime - m_FromTime) / timeRange;
+
+		m_FromTime -= timeDiff * timeDiffRatio;
+		m_ToTime += timeDiff * (1.0 - timeDiffRatio);
+		emit rangeChanged(m_FromTime, m_ToTime);
+		recalculateGridInverval(); // Redraw the widget
+	}
 }
 
 void AnimationCurveEditor::enterEvent(QEnterEvent *event)
@@ -139,6 +166,14 @@ QPoint AnimationCurveEditor::keyframePoint(double time, double value) const
 	return QPoint(round(x), round(y));
 }
 
+double AnimationCurveEditor::timeAtX(int x) const
+{
+	QRect grid = gridRect();
+	double xNormalized = (x - grid.left()) / static_cast<double>(grid.width());
+	double time = m_FromTime + xNormalized * (m_ToTime - m_FromTime);
+	return time;
+}
+
 AnimationTrack *AnimationCurveEditor::trackAtPosition(const QPoint &pos) const
 {
 	// Implement logic to find the AnimationTrack at the given position
@@ -149,6 +184,40 @@ AnimationKeyframe AnimationCurveEditor::keyframeAtPosition(const AnimationTrack 
 {
 	// Implement logic to find the AnimationKeyframe at the given position
 	return AnimationKeyframe();
+}
+
+void AnimationCurveEditor::recalculateGridInverval()
+{
+	QRect grid = gridRect();
+
+	/*
+	double m_HorizontalPrimaryTimeInterval = 1.0;
+	double m_HorizontalSecondaryTimeInterval = 0.1;
+	double m_VerticalPrimaryValueInterval = 1.0;
+	double m_VerticalSecondaryValueInterval = 0.1;
+	*/
+
+	double targetPixelsPerPrimary = 100.0; // Target pixels per primary
+	double pixelsPerValue = m_VerticalPixelPerValue;
+	double pixelsPerSecond = grid.width() / (m_ToTime - m_FromTime);
+
+	/*
+	double m_VerticalCenterValue = 0;
+	double m_VerticalPixelPerValue = 400.0 / 10.0;
+	double m_FromTime = 0.0;
+	double m_ToTime = 10.0;
+	*/
+
+	double primaryValueInterval = targetPixelsPerPrimary / pixelsPerValue;
+	primaryValueInterval = pow(10, round(log10(primaryValueInterval)));
+	if (abs(pixelsPerValue * primaryValueInterval - targetPixelsPerPrimary) > abs(pixelsPerValue * primaryValueInterval * 2.0 - targetPixelsPerPrimary))
+		primaryValueInterval *= 2.0;
+	else if (abs(pixelsPerValue * primaryValueInterval - targetPixelsPerPrimary) > abs(pixelsPerValue * primaryValueInterval * 0.5 - targetPixelsPerPrimary))
+		primaryValueInterval *= 0.5;
+	m_VerticalPrimaryValueInterval = primaryValueInterval;
+	m_VerticalSecondaryValueInterval = primaryValueInterval * 0.1;
+
+	update();
 }
 
 void AnimationCurveEditor::paintEditorBackground(QPainter &painter)

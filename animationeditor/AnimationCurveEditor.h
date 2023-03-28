@@ -92,8 +92,10 @@ private:
 	// Utility functions for working with keyframes and control points
 	QRect gridRect() const;
 	QPoint keyframePoint(double time, double value) const;
+	double timeAtX(int x) const;
 	AnimationTrack *trackAtPosition(const QPoint &pos) const;
 	AnimationKeyframe keyframeAtPosition(const AnimationTrack *track, const QPoint &pos) const;
+	void recalculateGridInverval();
 
 	// Paint and layout helper functions
 	void paintEditorBackground(QPainter &painter);
@@ -132,6 +134,7 @@ private:
 	double m_VerticalPixelPerValue = 400.0 / 10.0;
 	double m_FromTime = 0.0;
 	double m_ToTime = 10.0;
+
 };
 
 #endif /* ANIMATION_CURVE_EDITOR__H */
