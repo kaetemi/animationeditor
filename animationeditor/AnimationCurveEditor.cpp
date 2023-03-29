@@ -1285,8 +1285,7 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 	QPainterPath path;
 	if (it != keyframes.end() && std::next(it) != keyframes.end())
 	{
-		QPointF lastPoint = keyframePointF(it.key(), it.value().Value);
-		path.moveTo(lastPoint);
+		QPointF lastPoint;
 
 		bool withinTimeRange = false;
 
@@ -1298,6 +1297,8 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 			if (!withinTimeRange && keyframePointF(time2, 0).x() >= fromX)
 			{
 				// We are now within the time range
+				lastPoint = keyframePointF(it.key(), it.value().Value);
+				path.moveTo(lastPoint);
 				withinTimeRange = true;
 			}
 
