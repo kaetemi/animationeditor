@@ -35,16 +35,45 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QPaintEvent>
 #include <QTreeWidget>
 #include <QPainterPath>
+#include <QApplication>
+#include <QMenu>
+#include <QAction>
+
+#include "AnimationTimelineEditor.h" // AnimationContextMenu
 
 AnimationCurveEditor::AnimationCurveEditor(QWidget *parent, QTreeWidget *dimensionalReference)
     : QWidget(parent)
     , m_DimensionalReference(dimensionalReference)
 {
+	setMouseTracking(true);
+	// setFocusPolicy(Qt::StrongFocus);
+	qApp->installEventFilter(this);
 	recalculateGridInverval();
+	createContextMenu();
 }
 
 AnimationCurveEditor::~AnimationCurveEditor()
 {
+}
+
+void AnimationCurveEditor::createContextMenu()
+{
+	AnimationContextMenu *contextMenu = new AnimationContextMenu(this);
+	connect(contextMenu, &AnimationContextMenu::menuClosed, this, &AnimationCurveEditor::onContextMenuClosed);
+
+	m_ContextMenu = contextMenu;
+
+	m_RemoveTrackAction = new QAction(tr("Remove Track"), this);
+	connect(m_RemoveTrackAction, &QAction::triggered, this, &AnimationCurveEditor::removeTrack);
+	m_ContextMenu->addAction(m_RemoveTrackAction);
+
+	m_AddKeyframeAction = new QAction(tr("Add Keyframe"), this);
+	connect(m_AddKeyframeAction, &QAction::triggered, this, &AnimationCurveEditor::addKeyframe);
+	m_ContextMenu->addAction(m_AddKeyframeAction);
+
+	m_RemoveKeyframeAction = new QAction(tr("Remove Keyframe"), this);
+	connect(m_RemoveKeyframeAction, &QAction::triggered, this, &AnimationCurveEditor::removeKeyframe);
+	m_ContextMenu->addAction(m_RemoveKeyframeAction);
 }
 
 void AnimationCurveEditor::setAnimationTracks(const QList<AnimationTrack *> &tracks)
@@ -60,29 +89,165 @@ const QList<AnimationTrack *> &AnimationCurveEditor::animationTracks() const
 
 void AnimationCurveEditor::setKeyframeSelection(const QSet<ptrdiff_t> &selection)
 {
-	// Implement setting the keyframe selection
+	m_SelectedKeyframes = selection;
+	update();
 }
 
 QSet<ptrdiff_t> AnimationCurveEditor::keyframeSelection() const
 {
-	// Implement returning the keyframe selection
-	static QSet<ptrdiff_t> dummy;
-	return dummy;
+	return m_SelectedKeyframes;
+}
+
+void AnimationCurveEditor::updateMousePosition(const QPoint &pos)
+{
+	m_MouseMovePosition = pos;
+	AnimationTrack *track = nullptr;
+	ptrdiff_t keyframe = keyframeAtPosition(pos, &track);
+	if (keyframe != m_HoverKeyframe || track != m_HoverTrack)
+	{
+		m_HoverKeyframe = keyframe;
+		m_HoverTrack = track;
+		update();
+	}
+	else if (m_InteractionState != InteractionState::None)
+	{
+		// TODO: Update move, etc.
+		update();
+	}
 }
 
 void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 {
-	// Implement mouse press event handling
+	m_SkipContextMenu = false;
+	QPoint pos = event->pos();
+	updateMousePosition(pos);
+
+	if (event->button() == Qt::LeftButton)
+	{
+		m_MouseLeftPressPosition = pos;
+		ptrdiff_t keyframe = m_HoverKeyframe;
+		m_ActiveKeyframe = m_HoverKeyframe;
+		m_ActiveTrack = m_HoverTrack;
+		if (keyframe != -1)
+		{
+			if (m_SelectedKeyframes.contains(keyframe))
+			{
+				m_InteractionState = InteractionState::MoveOnly;
+			}
+			else
+			{
+				m_BackupSelectedKeyframes = m_SelectedKeyframes;
+				m_SelectedKeyframes.insert(keyframe);
+				m_InteractionState = InteractionState::SelectMove;
+			}
+		}
+		else
+		{
+			m_BackupSelectedKeyframes = m_SelectedKeyframes;
+			m_SelectedKeyframes.clear();
+			m_InteractionState = InteractionState::MultiSelect;
+		}
+	}
+
+	if (event->button() == Qt::RightButton)
+	{
+		m_MouseRightPressPosition = pos;
+		ptrdiff_t keyframe = m_HoverKeyframe;
+		switch (m_InteractionState)
+		{
+		case InteractionState::MoveOnly: {
+			// TODO: Implement abort move
+			m_SkipContextMenu = true;
+			break;
+		}
+		case InteractionState::SelectMove: {
+			// TODO: Implement abort move
+			m_SelectedKeyframes = m_BackupSelectedKeyframes;
+			m_BackupSelectedKeyframes.clear();
+			m_SkipContextMenu = true;
+			break;
+		}
+		case InteractionState::MultiSelect: {
+			m_SelectedKeyframes = m_BackupSelectedKeyframes;
+			m_BackupSelectedKeyframes.clear();
+			m_SkipContextMenu = true;
+			break;
+		}
+		default: {
+			m_ActiveKeyframe = m_HoverKeyframe;
+			m_ActiveTrack = m_HoverTrack;
+			break;
+		}
+		}
+	}
+
+	update();
 }
 
 void AnimationCurveEditor::mouseMoveEvent(QMouseEvent *event)
 {
-	// Implement mouse move event handling
+	updateMousePosition(event->pos());
+	/*
+	if (m_InteractionState == InteractionState::SelectMove || m_InteractionState == InteractionState::MoveOnly)
+	{
+	    // TODO: Implement moving selected keyframes.
+	}
+	else if (m_InteractionState == InteractionState::MultiSelect)
+	{
+	    m_SelectionRect.setBottomRight(event->pos());
+	    updateMouseSelection(QApplication::keyboardModifiers() & Qt::ControlModifier);
+	}
+	*/
 }
 
 void AnimationCurveEditor::mouseReleaseEvent(QMouseEvent *event)
 {
-	// Implement mouse release event handling
+	updateMousePosition(event->pos());
+
+	/*
+	if (event->button() == Qt::LeftButton)
+	{
+	    if (m_InteractionState == InteractionState::SelectMove || m_InteractionState == InteractionState::MoveOnly)
+	    {
+	        // TODO: Apply keyframe movements.
+	    }
+	    else if (m_InteractionState == InteractionState::MultiSelect)
+	    {
+	        updateMouseSelection(QApplication::keyboardModifiers() & Qt::ControlModifier);
+	    }
+	    m_InteractionState = InteractionState::SelectOnly;
+	}
+	else if (event->button() == Qt::RightButton)
+	{ // ...
+	    if (m_InteractionState == InteractionState::SelectMove || m_InteractionState == InteractionState::MoveOnly)
+	    {
+	        m_SelectedKeyframes = m_BackupSelection;
+	        // TODO: Revert keyframe movements.
+	    }
+	    else if (m_InteractionState == InteractionState::MultiSelect)
+	    {
+	        if (m_AbortContextMenu)
+	        {
+	            m_SelectedKeyframes = m_BackupSelection;
+	        }
+	    }
+	    m_InteractionState = InteractionState::SelectOnly;
+	}
+	*/
+
+	update();
+}
+
+void AnimationCurveEditor::contextMenuEvent(QContextMenuEvent *event)
+{
+	if (m_SkipContextMenu)
+	{
+		m_SkipContextMenu = false;
+		return;
+	}
+
+	// Show the context menu.
+	// ...
 }
 
 void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
@@ -114,27 +279,6 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 		emit rangeChanged(m_FromTime, m_ToTime);
 		recalculateGridInverval(); // Redraw the widget
 	}
-}
-
-void AnimationCurveEditor::enterEvent(QEnterEvent *event)
-{
-	// Implement enter event handling
-}
-
-void AnimationCurveEditor::leaveEvent(QEvent *event)
-{
-	// Implement leave event handling
-}
-
-bool AnimationCurveEditor::eventFilter(QObject *watched, QEvent *event)
-{
-	// Implement event filter
-	return false;
-}
-
-void AnimationCurveEditor::contextMenuEvent(QContextMenuEvent *event)
-{
-	// Implement context menu event handling
 }
 
 QRect AnimationCurveEditor::gridRect() const
@@ -198,18 +342,20 @@ double AnimationCurveEditor::timeAtX(int x) const
 	return time;
 }
 
-ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos) const
+ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos, AnimationTrack **trackRes) const
 {
 	int keyframeHalfSize = 6;
-	for (AnimationTrack *track : m_AnimationTracks)
+	for (QList<AnimationTrack *>::const_iterator trackIt = m_AnimationTracks.end(); trackIt != m_AnimationTracks.begin();)
 	{
+		--trackIt;
+		AnimationTrack *track = *trackIt;
 		const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
 		if (keyframes.begin() != keyframes.end())
 		{
 			// Check if the pos time is between the first and last keyframe
 			double firstTime = keyframes.begin().key();
 			double lastTime = std::prev(keyframes.end()).key();
-			if (timeAtX(pos.x()) >= firstTime && timeAtX(pos.x()) <= lastTime)
+			if (timeAtX(pos.x() + keyframeHalfSize) >= firstTime && timeAtX(pos.x() - keyframeHalfSize) <= lastTime)
 			{
 				// Find the keyframe at the given position
 				for (AnimationTrack::KeyframeMap::const_iterator it = keyframes.constEnd(); it != keyframes.constBegin();)
@@ -218,14 +364,19 @@ ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos) const
 					QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
 					if (abs(keyframePos.x() - pos.x()) <= keyframeHalfSize && abs(keyframePos.y() - pos.y()) <= keyframeHalfSize)
 					{
+						if (trackRes)
+							*trackRes = track;
 						return it.value().Id;
 					}
 				}
 			}
 		}
 	}
+	if (trackRes)
+		*trackRes = nullptr;
 	return -1;
 }
+
 QSet<ptrdiff_t> AnimationCurveEditor::keyframesAtPosition(const QPoint &pos) const
 {
 	int keyframeHalfSize = 6;
@@ -238,7 +389,7 @@ QSet<ptrdiff_t> AnimationCurveEditor::keyframesAtPosition(const QPoint &pos) con
 			// Check if the pos time is between the first and last keyframe
 			double firstTime = keyframes.begin().key();
 			double lastTime = std::prev(keyframes.end()).key();
-			if (timeAtX(pos.x()) >= firstTime && timeAtX(pos.x()) <= lastTime)
+			if (timeAtX(pos.x() + keyframeHalfSize) >= firstTime && timeAtX(pos.x() - keyframeHalfSize) <= lastTime)
 			{
 				// Find the keyframe at the given position
 				for (auto it = keyframes.begin(); it != keyframes.end(); ++it)
@@ -679,17 +830,12 @@ void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 		{
 			QPoint point = keyframePoint(it.key(), it.value().Value);
 			bool isSelected = m_SelectedKeyframes.contains(it.value().Id);
-			bool isHovered = false; // Update this based on mouse hover state
-			bool isPressed = false; // Update this based on mouse press state
+			bool isHovered = m_HoverKeyframe == it.value().Id;
+			bool isPressed = m_ActiveKeyframe == it.value().Id;
 			QRect keyframeRect = QRect(point.x() - 6, point.y() - 6, 12, 12);
 			paintKeyframe(painter, keyframeRect, isSelected, isHovered, isPressed);
 		}
 	}
-}
-
-void AnimationCurveEditor::createContextMenu()
-{
-	// Implement creating the context menu
 }
 
 void AnimationCurveEditor::removeTrack()
@@ -712,9 +858,38 @@ void AnimationCurveEditor::onContextMenuClosed()
 	// Implement handling the closing of the context menu
 }
 
-void AnimationCurveEditor::updateMouseHover(const QPoint &pos)
+void AnimationCurveEditor::enterEvent(QEnterEvent *event)
 {
-	// Implement updating the mouse hover state
+	// Implement enter event handling
+}
+
+void AnimationCurveEditor::leaveEvent(QEvent *event)
+{
+	// Implement leave event handling
+}
+
+bool AnimationCurveEditor::eventFilter(QObject *watched, QEvent *event)
+{
+	if (m_InteractionState == InteractionState::MultiSelect)
+	{
+		if (event->type() == QEvent::KeyPress)
+		{
+			QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+			if (keyEvent->key() == Qt::Key_Control)
+			{
+				updateMouseSelection(true);
+			}
+		}
+		else if (event->type() == QEvent::KeyRelease)
+		{
+			QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+			if (keyEvent->key() == Qt::Key_Control)
+			{
+				updateMouseSelection(false);
+			}
+		}
+	}
+	return QWidget::eventFilter(watched, event);
 }
 
 void AnimationCurveEditor::updateMouseSelection(bool ctrlHeld)

@@ -42,6 +42,8 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include "AnimationTrack.h"
 
 class QTreeWidget;
+class QMenu;
+class QAction;
 
 class AnimationCurveEditor : public QWidget
 {
@@ -80,12 +82,22 @@ protected:
 	bool eventFilter(QObject *watched, QEvent *event) override;
 	void contextMenuEvent(QContextMenuEvent *event) override;
 
+private slots:
+	// Context menu actions
+	void removeTrack();
+	void addKeyframe();
+	void removeKeyframe();
+	void onContextMenuClosed();
+
 private:
+	// Context menu management
+	void createContextMenu();
+
 	// Enum for user interaction state
 	enum class InteractionState
 	{
+		None = 0,
 		SelectMove,
-		SelectOnly,
 		MoveOnly,
 		MultiSelect
 	};
@@ -96,7 +108,7 @@ private:
 	QPoint keyframePoint(double time, double value) const;
 	double timeAtX(double x) const;
 	double timeAtX(int x) const;
-	ptrdiff_t keyframeAtPosition(const QPoint &pos) const;
+	ptrdiff_t keyframeAtPosition(const QPoint &pos, AnimationTrack **trackRes = nullptr) const;
 	QSet<ptrdiff_t> keyframesAtPosition(const QPoint &pos) const;
 	QSet<ptrdiff_t> keyframesInRect(const QRect &rect) const;
 	void recalculateGridInverval();
@@ -108,24 +120,39 @@ private:
 	void paintCurve(QPainter &painter, AnimationTrack *track, const QColor &curveColor);
 	void paintKeyframe(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active);
 
-	// Context menu management
-	void createContextMenu();
-	void removeTrack();
-	void addKeyframe();
-	void removeKeyframe();
-	void onContextMenuClosed();
-
 	// Mouse interaction helper functions
-	void updateMouseHover(const QPoint &pos);
+	void updateMousePosition(const QPoint &pos);
 	void updateMouseSelection(bool ctrlHeld);
 
 private:
 	QTreeWidget *m_DimensionalReference;
 	QList<AnimationTrack *> m_AnimationTracks;
-	InteractionState m_InteractionState;
+	InteractionState m_InteractionState = InteractionState::None;
 	QSet<ptrdiff_t> m_SelectedKeyframes;
 	QSet<ptrdiff_t> m_SelectedLeftInterpolationHandles;
 	QSet<ptrdiff_t> m_SelectedRightInterpolationHandles;
+	QSet<ptrdiff_t> m_BackupSelectedKeyframes;
+	QSet<ptrdiff_t> m_BackupSelectedLeftInterpolationHandles;
+	QSet<ptrdiff_t> m_BackupSelectedRightInterpolationHandles;
+
+	// Mouse interaction state
+	ptrdiff_t m_ActiveKeyframe = -1;
+	AnimationTrack *m_ActiveTrack = nullptr;
+	ptrdiff_t m_HoverKeyframe = -1;
+	ptrdiff_t m_HoverLeftInterpolationHandle = -1;
+	ptrdiff_t m_HoverRightInterpolationHandle = -1;
+	AnimationTrack *m_HoverTrack = nullptr;
+	QPoint m_MouseLeftPressPosition;
+	QPoint m_MouseRightPressPosition;
+	QPoint m_MouseMovePosition;
+	QPoint m_MouseReleasePosition;
+	bool m_SkipContextMenu = false;
+
+	// Context menu actions
+	QMenu *m_ContextMenu = nullptr;
+	QAction *m_RemoveTrackAction = nullptr;
+	QAction *m_AddKeyframeAction = nullptr;
+	QAction *m_RemoveKeyframeAction = nullptr;
 
 	// Grid
 	double m_HorizontalPrimaryTimeInterval = 1.0;
