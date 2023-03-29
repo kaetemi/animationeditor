@@ -105,6 +105,7 @@ private:
 	// Utility functions for working with keyframes and control points
 	QRect gridRect() const;
 	QPointF keyframePointF(double time, double value) const;
+	QPoint keyframePointOffset(double time, double value) const;
 	QPoint keyframePoint(double time, double value) const;
 	double timeAtX(double x) const;
 	double timeAtX(int x) const;
@@ -119,6 +120,7 @@ private:
 	void paintValueRuler(QPainter &painter);
 	void paintCurve(QPainter &painter, AnimationTrack *track, const QColor &curveColor);
 	void paintKeyframe(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active);
+	void paintInterpolationHandle(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active);
 
 	// Mouse interaction helper functions
 	void updateMousePosition(const QPoint &pos, bool ctrlHeld);

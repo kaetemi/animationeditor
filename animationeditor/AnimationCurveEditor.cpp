@@ -369,6 +369,21 @@ QPoint AnimationCurveEditor::keyframePoint(double time, double value) const
 	return QPoint(round(x), round(y));
 }
 
+QPoint AnimationCurveEditor::keyframePointOffset(double time, double value) const
+{
+	// Get the grid rectangle
+	QRect grid = gridRect();
+
+	// Calculate the horizontal position (x) offset
+	double normalizedTime = time / (m_ToTime - m_FromTime);
+	double x = normalizedTime * grid.width();
+
+	// Calculate the vertical position (y) offset
+	double y = value * m_VerticalPixelPerValue;
+
+	return QPoint(round(x), round(y));
+}
+
 double AnimationCurveEditor::timeAtX(double x) const
 {
 	QRect grid = gridRect();
@@ -658,6 +673,74 @@ void AnimationCurveEditor::paintKeyframe(QPainter &painter, const QRect &rect, b
 	painter.restore();
 }
 
+void AnimationCurveEditor::paintInterpolationHandle(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active)
+{
+	// Adjust the keyframe size
+	QRect adjustedRect = rect.adjusted(1, 1, -1, -1);
+	QRect shadowRect = adjustedRect.adjusted(-2, -2, 2, 2);
+	QPointF top = QPointF((adjustedRect.left() + adjustedRect.right()) / 2.0, adjustedRect.top());
+	QPointF bottom = QPointF((adjustedRect.left() + adjustedRect.right()) / 2.0, adjustedRect.bottom());
+
+	QColor shadow = palette().color(QPalette::Shadow).darker(300);
+	shadow.setAlpha(128);
+
+	QBrush shadowBrush(shadow);
+
+	QPainterPath shadowPath;
+	shadowPath.addEllipse(shadowRect);
+
+	// Create the gradient brush
+	QLinearGradient gradient(top, bottom);
+
+	QColor baseColor;
+	QColor lightColor;
+	QColor darkColor;
+	if (selected)
+	{
+		baseColor = palette().color(QPalette::Highlight);
+		lightColor = baseColor.lighter(150);
+		darkColor = baseColor.darker(125);
+	}
+	else
+	{
+		baseColor = lerp(palette().color(QPalette::Button), palette().color(QPalette::ButtonText), 0.4);
+		lightColor = baseColor.lighter(110);
+		darkColor = baseColor.darker(110);
+	}
+
+	if (active)
+	{
+		lightColor = lightColor.darker(110);
+		darkColor = darkColor.darker(110);
+	}
+	else if (hover)
+	{
+		lightColor = lightColor.lighter(125);
+		darkColor = darkColor.lighter(125);
+	}
+
+	gradient.setColorAt(0, lightColor);
+	gradient.setColorAt(1, darkColor);
+
+	QBrush brush(gradient);
+
+	QPainterPath path;
+	path.addEllipse(adjustedRect);
+
+	painter.save();
+	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.fillPath(shadowPath, shadowBrush);
+	painter.fillPath(path, brush);
+
+	// Draw the border
+	QPen borderPen(lightColor.lighter(110));
+	borderPen.setWidthF(1.0);
+
+	painter.setPen(borderPen);
+	painter.drawPath(path);
+	painter.restore();
+}
+
 void AnimationCurveEditor::paintGrid(QPainter &painter)
 {
 	QRect grid = gridRect();
@@ -860,6 +943,10 @@ void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 	paintGrid(painter);
 	paintValueRuler(painter);
 
+	// Handle pen
+	QPen handlePen = QPen(palette().color(QPalette::ButtonText));
+	handlePen.setWidthF(0.75);
+
 	// Paint the curves
 	for (AnimationTrack *track : m_AnimationTracks)
 	{
@@ -872,11 +959,28 @@ void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 		for (AnimationTrack::KeyframeMap::const_iterator it = keyframes.begin(); it != keyframes.end(); ++it)
 		{
 			QPoint point = keyframePoint(it.key(), it.value().Value);
-			bool isSelected = m_SelectedKeyframes.contains(it.value().Id);
-			bool isHovered = m_HoverKeyframe == it.value().Id;
-			bool isPressed = (m_ActiveKeyframe == it.value().Id) && isHovered;
+			if (track->interpolationMethod() == AnimationInterpolation::Bezier)
+			{
+				const double scale = 1.0;
+				QPoint leftOffset = keyframePointOffset(it.value().Interpolation.Bezier.InTangentX * scale, it.value().Interpolation.Bezier.InTangentY * scale);
+				QPoint leftPoint = point + leftOffset;
+				QPoint rightOffset = keyframePointOffset(it.value().Interpolation.Bezier.OutTangentX * scale, it.value().Interpolation.Bezier.OutTangentY * scale);
+				QPoint rightPoint = point + rightOffset;
+				QRect leftHandleRect = QRect(leftPoint.x() - 4, leftPoint.y() - 4, 8, 8);
+				QRect rightHandleRect = QRect(rightPoint.x() - 4, rightPoint.y() - 4, 8, 8);
+				painter.setRenderHint(QPainter::Antialiasing, true);
+				painter.setPen(handlePen);
+				painter.drawLine(point, leftPoint);
+				painter.drawLine(point, rightPoint);
+				painter.setRenderHint(QPainter::Antialiasing, false);
+				paintInterpolationHandle(painter, leftHandleRect, true, false, false);
+				paintInterpolationHandle(painter, rightHandleRect, true, false, false);
+			}
+			bool selected = m_SelectedKeyframes.contains(it.value().Id);
+			bool hover = m_HoverKeyframe == it.value().Id;
+			bool active = (m_ActiveKeyframe == it.value().Id) && hover;
 			QRect keyframeRect = QRect(point.x() - 6, point.y() - 6, 12, 12);
-			paintKeyframe(painter, keyframeRect, isSelected, isHovered, isPressed);
+			paintKeyframe(painter, keyframeRect, selected, hover, active);
 		}
 	}
 
