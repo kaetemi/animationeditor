@@ -151,11 +151,48 @@ void AnimationTrack::moveKeyframe(double fromTime, double toTime)
 	}
 }
 
+void AnimationTrack::setName(const QString &name)
+{
+	if (m_TreeWidgetItem)
+	{
+		m_TreeWidgetItem->setText(0, name);
+		emit nameChanged(name);
+	}
+}
+
+QString AnimationTrack::name() const
+{
+	return m_TreeWidgetItem ? m_TreeWidgetItem->text(0) : QStringLiteral("Track");
+}
+
+static QColor lerp(const QColor &color1, const QColor &color2, qreal t)
+{
+	float r1, g1, b1, a1;
+	float r2, g2, b2, a2;
+
+	color1.getRgbF(&r1, &g1, &b1, &a1);
+	color2.getRgbF(&r2, &g2, &b2, &a2);
+
+	float r = r1 + (r2 - r1) * t;
+	float g = g1 + (g2 - g1) * t;
+	float b = b1 + (b2 - b1) * t;
+	float a = a1 + (a2 - a1) * t;
+
+	return QColor::fromRgbF(r, g, b, a);
+}
+
 void AnimationTrack::setColor(const QColor &color)
 {
 	if (m_Color != color)
 	{
 		m_Color = color;
+		/*
+		if (m_TreeWidgetItem && m_TreeWidgetItem->treeWidget())
+		{
+			m_TreeWidgetItem->setForeground(0, QBrush(lerp(color, 
+				m_TreeWidgetItem->treeWidget()->palette().color(QPalette::Text), 0.4)));
+		}
+		*/
 		emit colorChanged();
 	}
 }
@@ -173,23 +210,23 @@ void AnimationTrack::setRandomColor()
 
 	// Generate a random hue between 0 and 359
 	// If the track name contains X, Y, or Z, generate a hue between
-	// -30 and 30 (red), 90 and 150 (green), or 210 and 270 (blue) respectively
+	// -5 and 5 (red), 115 and 125 (green), or 235 and 245 (blue) respectively
 	int hue;
 	if (trackName.contains("X"))
 	{
-		hue = rng.generate() % 60;
-		hue -= 30;
+		hue = rng.generate() % 10;
+		hue -= 5;
 		hue = std::clamp(hue, 0, 359);
 	}
 	else if (trackName.contains("Y"))
 	{
-		hue = rng.generate() % 60;
-		hue += (120 - 30);
+		hue = rng.generate() % 10;
+		hue += (120 - 5);
 	}
 	else if (trackName.contains("Z"))
 	{
-		hue = rng.generate() % 60;
-		hue += (240 - 30);
+		hue = rng.generate() % 10;
+		hue += (240 - 5);
 	}
 	else
 	{

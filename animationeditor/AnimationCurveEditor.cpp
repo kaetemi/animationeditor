@@ -267,7 +267,7 @@ QSet<ptrdiff_t> AnimationCurveEditor::keyframesInRect(const QRect &rect) const
 		if (!keyframes.isEmpty())
 		{
 			double firstTime = keyframes.begin().key();
-			double lastTime = (keyframes.end() - 1).key();
+			double lastTime = std::prev(keyframes.end()).key();
 			int firstTimeX = keyframePoint(firstTime, 0).x();
 			int lastTimeX = keyframePoint(lastTime, 0).x();
 

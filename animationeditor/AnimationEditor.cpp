@@ -187,7 +187,7 @@ AnimationTrack *AnimationEditor::addTrack(AnimationNode *node)
 {
 	AnimationTrack *newTrack = new AnimationTrack(this);
 	newTrack->m_TreeWidgetItem = new QTreeWidgetItem(m_TrackTreeWidget);
-	newTrack->m_TreeWidgetItem->setText(0, "Track Name");
+	newTrack->m_TreeWidgetItem->setText(0, "Track");
 
 	if (node == nullptr)
 		node = &m_RootNode;

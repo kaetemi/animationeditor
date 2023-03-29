@@ -75,6 +75,14 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < 10; ++i)
 	{
 		AnimationTrack *track2 = animationEditor->addTrack();
+		if (i == 0)
+			track2->setName("Test Track");
+		else if (i == 1)
+			track2->setName("Track X");
+		else if (i == 2)
+			track2->setName("Track Y");
+		else if (i == 3)
+			track2->setName("Track Z");
 		track2->setInterpolationMethod(AnimationInterpolation::Bezier);
 		track2->upsertKeyframe(0.5 + i, AnimationKeyframe(2.0 + i * -0.2, -0.01, 0.0, 0.01, 0.0));
 		track2->upsertKeyframe(1.5 + i, AnimationKeyframe(3.0 + i * -0.8, -0.02, 0.0, 0.02, 0.0));

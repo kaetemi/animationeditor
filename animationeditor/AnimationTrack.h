@@ -185,6 +185,9 @@ public:
 	void removeKeyframe(double time);
 	void moveKeyframe(double fromTime, double toTime);
 
+	void setName(const QString &name);
+	QString name() const;
+
 	void setColor(const QColor &color);
 	const QColor &color() const;
 
@@ -196,6 +199,7 @@ signals:
 	void keyframesChanged();
 	void interpolationMethodChanged();
 	void colorChanged();
+	void nameChanged(const QString &name);
 
 private:
 	friend AnimationEditor;
