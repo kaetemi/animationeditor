@@ -527,14 +527,15 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 	double scrollAmount = event->angleDelta().y() / 8.0;
 	double scaleFactor = 1 + scrollAmount / 120.0;
 
-	// Change m_VerticalPixelPerValue when there are no key modifiers
-	if (event->modifiers() == Qt::NoModifier)
+	// Change m_VerticalPixelPerValue when there are no key modifiers, or Control is held
+	if (event->modifiers() == Qt::NoModifier || event->modifiers() == Qt::ControlModifier)
 	{
 		m_VerticalPixelPerValue *= scaleFactor;
-		recalculateGridInverval(); // Redraw the widget
+		if (event->modifiers() != Qt::ControlModifier)
+			recalculateGridInverval(); // Redraw the widget
 	}
-	// Change the from/to time range when the Shift key is held
-	else if (event->modifiers() == Qt::ShiftModifier)
+	// Change the from/to time range when the Shift key is held, or Control is held
+	if (event->modifiers() == Qt::ShiftModifier || event->modifiers() == Qt::ControlModifier)
 	{
 		double timeRange = m_ToTime - m_FromTime;
 
@@ -542,7 +543,7 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 		double mouseTime = timeAtX(event->position().x());
 
 		// Scale the time range around the mouse position
-		double newTimeRange = timeRange * scaleFactor;
+		double newTimeRange = timeRange / scaleFactor;
 		double timeDiff = newTimeRange - timeRange;
 		double timeDiffRatio = (mouseTime - m_FromTime) / timeRange;
 
