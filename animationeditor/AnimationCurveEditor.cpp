@@ -263,12 +263,25 @@ QSet<ptrdiff_t> AnimationCurveEditor::keyframesInRect(const QRect &rect) const
 	for (AnimationTrack *track : m_AnimationTracks)
 	{
 		const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
-		for (auto it = keyframes.begin(); it != keyframes.end(); ++it)
+		if (!keyframes.isEmpty())
 		{
-			QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
-			if (expandedRect.contains(keyframePos))
+			double firstTime = keyframes.begin().key();
+			double lastTime = (keyframes.end() - 1).key();
+			int firstTimeX = keyframePoint(firstTime, 0).x();
+			int lastTimeX = keyframePoint(lastTime, 0).x();
+
+			QRect trackTimeRect(firstTimeX, expandedRect.top(), lastTimeX - firstTimeX, expandedRect.height());
+
+			if (expandedRect.intersects(trackTimeRect))
 			{
-				res.insert(it.value().Id);
+				for (auto it = keyframes.begin(); it != keyframes.end(); ++it)
+				{
+					QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
+					if (expandedRect.contains(keyframePos))
+					{
+						res.insert(it.value().Id);
+					}
+				}
 			}
 		}
 	}
