@@ -570,7 +570,7 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 	double scrollAmount = event->angleDelta().y() / 8.0;
 	double scaleFactor = 1 + scrollAmount / 120.0;
 
-	// Change m_VerticalPixelPerValue when there are no key modifiers, or Control is held
+	// Change m_VerticalPixelPerValue when there are no key modifiers, or the Control key is held
 	if (event->modifiers() == Qt::NoModifier || event->modifiers() == Qt::ControlModifier)
 	{
 		// Calculate the value at the mouse position
@@ -588,8 +588,8 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 
 		needRecalculate = true;
 	}
-	// Change the from/to time range when the Shift key is held, or Control is held
-	if (event->modifiers() == Qt::ShiftModifier || event->modifiers() == Qt::ControlModifier)
+	// Change the from/to time range when there are no key modifiers, or the Shift key is held
+	if (event->modifiers() == Qt::NoModifier || event->modifiers() == Qt::ShiftModifier)
 	{
 		double timeRange = m_ToTime - m_FromTime;
 
