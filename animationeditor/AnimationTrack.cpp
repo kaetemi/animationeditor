@@ -31,6 +31,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include "AnimationTrack.h"
 
+#include <QTreeWidgetItem>
 #include <QRandomGenerator>
 #include <random>
 
@@ -168,8 +169,32 @@ void AnimationTrack::setRandomColor()
 {
 	static QRandomGenerator rng(static_cast<quint64>(static_cast<quint64>(std::random_device()())));
 
+	QString trackName = m_TreeWidgetItem->text(0);
+
 	// Generate a random hue between 0 and 359
-	int hue = rng.generate() % 360;
+	// If the track name contains X, Y, or Z, generate a hue between
+	// -30 and 30 (red), 90 and 150 (green), or 210 and 270 (blue) respectively
+	int hue;
+	if (trackName.contains("X"))
+	{
+		hue = rng.generate() % 60;
+		hue -= 30;
+		hue = std::clamp(hue, 0, 359);
+	}
+	else if (trackName.contains("Y"))
+	{
+		hue = rng.generate() % 60;
+		hue += (120 - 30);
+	}
+	else if (trackName.contains("Z"))
+	{
+		hue = rng.generate() % 60;
+		hue += (240 - 30);
+	}
+	else
+	{
+		hue = rng.generate() % 360;
+	}
 
 	// Generate saturation between 80% and 90%
 	int saturation = 80 + rng.generate() % 10;

@@ -208,7 +208,7 @@ ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos) const
 		{
 			// Check if the pos time is between the first and last keyframe
 			double firstTime = keyframes.begin().key();
-			double lastTime = (keyframes.end() - 1).key();
+			double lastTime = std::prev(keyframes.end()).key();
 			if (timeAtX(pos.x()) >= firstTime && timeAtX(pos.x()) <= lastTime)
 			{
 				// Find the keyframe at the given position
@@ -237,7 +237,7 @@ QSet<ptrdiff_t> AnimationCurveEditor::keyframesAtPosition(const QPoint &pos) con
 		{
 			// Check if the pos time is between the first and last keyframe
 			double firstTime = keyframes.begin().key();
-			double lastTime = (keyframes.end() - 1).key();
+			double lastTime = std::prev(keyframes.end()).key();
 			if (timeAtX(pos.x()) >= firstTime && timeAtX(pos.x()) <= lastTime)
 			{
 				// Find the keyframe at the given position
@@ -595,17 +595,17 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 
 	// Check if the track has at least two keyframes
 	QPainterPath path;
-	if (it != keyframes.end() && (it + 1) != keyframes.end())
+	if (it != keyframes.end() && std::next(it) != keyframes.end())
 	{
 		QPointF lastPoint = keyframePointF(it.key(), it.value().Value);
 		path.moveTo(lastPoint);
 
 		bool withinTimeRange = false;
 
-		for (; (it + 1) != keyframes.end(); ++it)
+		for (; std::next(it) != keyframes.end(); ++it)
 		{
 			double time1 = it.key();
-			double time2 = (it + 1).key();
+			double time2 = std::next(it).key();
 
 			if (!withinTimeRange && keyframePointF(time2, 0).x() >= fromX)
 			{
@@ -621,7 +621,7 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 					if (time1 > m_ToTime)
 						break;
 
-					QPointF nextPoint = keyframePointF(time2, (it + 1).value().Value);
+					QPointF nextPoint = keyframePointF(time2, std::next(it).value().Value);
 					path.lineTo(nextPoint);
 					lastPoint = nextPoint;
 				}
@@ -636,7 +636,7 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 						if (lastPoint.x() > toX)
 							break;
 
-						QPointF nextPoint = keyframePointF(timeX, track->valueAtTime(it, it + 1, timeX));
+						QPointF nextPoint = keyframePointF(timeX, track->valueAtTime(it, std::next(it), timeX));
 						path.lineTo(nextPoint);
 						lastPoint = nextPoint;
 						x += pxStep;

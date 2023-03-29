@@ -138,6 +138,11 @@ AnimationEditor::AnimationEditor(QWidget *parent)
 
 	// Hide the header in the tree widget
 	m_TrackTreeWidget->setHeaderHidden(true);
+
+	// TODO:
+	// In the toolbar, add textboxes for the time and value of the last selected keyframe
+	// Also show the track name of the selected keyframe
+	// This needs to update as needed, based on track ptr and keyframe id
 }
 
 AnimationEditor::~AnimationEditor()
