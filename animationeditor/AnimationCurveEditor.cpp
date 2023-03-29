@@ -536,7 +536,19 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 	// Change m_VerticalPixelPerValue when there are no key modifiers, or Control is held
 	if (event->modifiers() == Qt::NoModifier || event->modifiers() == Qt::ControlModifier)
 	{
+		// Calculate the value at the mouse position
+		double mouseY = event->position().y();
+		double mouseValue = timeValueAtXY(QPoint(0, mouseY)).y();
+
+		// Scale the vertical pixel per value around the mouse position
+		double prevVerticalPixelPerValue = m_VerticalPixelPerValue;
 		m_VerticalPixelPerValue *= scaleFactor;
+
+		double newMouseY = keyframePointF(0, mouseValue).y();
+		double yOffset = newMouseY - mouseY;
+
+		m_VerticalCenterValue -= yOffset / m_VerticalPixelPerValue;
+
 		needRecalculate = true;
 	}
 	// Change the from/to time range when the Shift key is held, or Control is held
@@ -555,6 +567,7 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 		m_FromTime -= timeDiff * timeDiffRatio;
 		m_ToTime += timeDiff * (1.0 - timeDiffRatio);
 		emit rangeChanged(m_FromTime, m_ToTime);
+
 		needRecalculate = true;
 	}
 	if (needRecalculate)
