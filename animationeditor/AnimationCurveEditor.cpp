@@ -287,7 +287,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 		m_ActiveLeftInterpolationHandle = leftHandle;
 		m_ActiveRightInterpolationHandle = rightHandle;
 		m_ActiveTrack = m_HoverTrack;
-		if (keyframe != 1 || leftHandle != -1 || rightHandle != -1)
+		if (keyframe != -1 || leftHandle != -1 || rightHandle != -1)
 		{
 			// Backup all tracks before modifying keyframes
 			m_BackupAnimationTracks.clear();
