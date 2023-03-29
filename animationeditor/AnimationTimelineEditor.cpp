@@ -475,10 +475,10 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 	if (event->button() == Qt::LeftButton)
 	{
 		// Backup all tracks before modifying keyframes
-		m_OriginalAnimationTracks.clear();
+		m_BackupAnimationTracks.clear();
 		for (const AnimationTrack *track : m_AnimationTracks)
 		{
-			m_OriginalAnimationTracks.append(track->keyframes());
+			m_BackupAnimationTracks.append(track->keyframes());
 		}
 
 		bool ctrlHeld = event->modifiers() & Qt::ControlModifier;
@@ -578,7 +578,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 			for (int i = 0; i < m_AnimationTracks.size(); ++i)
 			{
 				AnimationTrack *track = m_AnimationTracks[i];
-				AnimationTrack::KeyframeMap &originalKeyframes = m_OriginalAnimationTracks[i];
+				AnimationTrack::KeyframeMap &originalKeyframes = m_BackupAnimationTracks[i];
 				track->setKeyframes(originalKeyframes);
 				emit trackChanged(track);
 			}
@@ -632,7 +632,7 @@ void AnimationTimelineEditor::mouseMoveEvent(QMouseEvent *event)
 		for (int i = 0; i < m_AnimationTracks.size(); ++i)
 		{
 			AnimationTrack *track = m_AnimationTracks[i];
-			AnimationTrack::KeyframeMap &originalKeyframes = m_OriginalAnimationTracks[i];
+			AnimationTrack::KeyframeMap &originalKeyframes = m_BackupAnimationTracks[i];
 
 			// Restore the original tracks before modifying keyframes
 			track->setKeyframes(originalKeyframes);
@@ -712,7 +712,7 @@ void AnimationTimelineEditor::mouseReleaseEvent(QMouseEvent *event)
 	m_TrackMoveStart = QPoint();
 	m_PressedKeyframe = -1;
 	m_RightPressedKeyframe = -1;
-	m_OriginalAnimationTracks.clear();
+	m_BackupAnimationTracks.clear();
 	// updateMouseHover(event->pos());
 	mouseMoveEvent(event);
 	update();

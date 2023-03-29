@@ -175,24 +175,62 @@ void AnimationCurveEditor::updateMousePosition(const QPoint &pos, bool ctrlHeld)
 				}
 			}
 
-			if (m_SelectMoveTresholdPassed && (m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::MoveLeftHandleOnly || m_InteractionState == InteractionState::MoveRightHandleOnly))
+			if (m_SelectMoveTresholdPassed || m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::MoveLeftHandleOnly || m_InteractionState == InteractionState::MoveRightHandleOnly)
 			{
 				// Calculate the delta movement in time and value
 				double timeDelta = timeAtX(pos.x()) - timeAtX(m_MouseLeftPressPosition.x());
-				double valueDelta = (pos.y() - m_MouseLeftPressPosition.y()) / m_VerticalPixelPerValue;
+				double valueDelta = -(pos.y() - m_MouseLeftPressPosition.y()) / m_VerticalPixelPerValue;
 
 				// Move the selected keyframes or handles relative to the backup position
-				if (m_InteractionState == InteractionState::MoveOnly)
+				for (int i = 0; i < m_AnimationTracks.size(); ++i)
 				{
-					// TODO
-				}
-				else if (m_InteractionState == InteractionState::MoveLeftHandleOnly)
-				{
-					// TODO
-				}
-				else if (m_InteractionState == InteractionState::MoveRightHandleOnly)
-				{
-					// TODO
+					AnimationTrack *track = m_AnimationTracks[i];
+					AnimationTrack::KeyframeMap &originalKeyframes = m_BackupAnimationTracks[i];
+
+					// Restore the original tracks before modifying keyframes
+					track->m_Keyframes = originalKeyframes;
+					bool changed = false;
+
+					for (AnimationTrack::KeyframeMap::const_iterator it = originalKeyframes.begin(); it != originalKeyframes.end(); ++it)
+					{
+						if (m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::SelectMove)
+						{
+							if (m_SelectedKeyframes.contains(it.value().Id))
+							{
+								double newTime = it.key() + timeDelta;
+								double newValue = it.value().Value + valueDelta;
+								AnimationKeyframe keyframe = track->m_Keyframes.value(it.key());
+								keyframe.Value = newValue;
+								track->m_Keyframes.remove(it.key());
+								track->m_Keyframes.insert(newTime, keyframe);
+								changed = true;
+							}
+						}
+						else if (m_InteractionState == InteractionState::MoveLeftHandleOnly || m_InteractionState == InteractionState::SelectMoveLeftHandle)
+						{
+							if (m_SelectedLeftInterpolationHandles.contains(it.value().Id))
+							{
+								AnimationKeyframe &keyframe = track->m_Keyframes[it.key()];
+								keyframe.Interpolation.Bezier.InTangentX += timeDelta;
+								keyframe.Interpolation.Bezier.InTangentY += valueDelta;
+							}
+						}
+						else if (m_InteractionState == InteractionState::MoveRightHandleOnly || m_InteractionState == InteractionState::SelectMoveRightHandle)
+						{
+							if (m_SelectedRightInterpolationHandles.contains(it.value().Id))
+							{
+								AnimationKeyframe &keyframe = track->m_Keyframes[it.key()];
+								keyframe.Interpolation.Bezier.OutTangentX += timeDelta;
+								keyframe.Interpolation.Bezier.OutTangentY += valueDelta;
+								changed = true;
+							}
+						}
+					}
+
+					if (changed)
+					{
+						emit trackChanged(track);
+					}
 				}
 			}
 		}
@@ -221,6 +259,17 @@ void AnimationCurveEditor::updateMouseSelection(bool ctrlHeld)
 	}
 }
 
+void AnimationCurveEditor::restoreAnimationTracks()
+{
+	for (int i = 0; i < m_AnimationTracks.size(); ++i)
+	{
+		AnimationTrack *track = m_AnimationTracks[i];
+		AnimationTrack::KeyframeMap &originalKeyframes = m_BackupAnimationTracks[i];
+		track->setKeyframes(originalKeyframes);
+		emit trackChanged(track);
+	}
+}
+
 void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 {
 	m_SkipContextMenu = false;
@@ -238,6 +287,15 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 		m_ActiveLeftInterpolationHandle = leftHandle;
 		m_ActiveRightInterpolationHandle = rightHandle;
 		m_ActiveTrack = m_HoverTrack;
+		if (keyframe != 1 || leftHandle != -1 || rightHandle != -1)
+		{
+			// Backup all tracks before modifying keyframes
+			m_BackupAnimationTracks.clear();
+			for (const AnimationTrack *track : m_AnimationTracks)
+			{
+				m_BackupAnimationTracks.append(track->keyframes());
+			}
+		}
 		if (keyframe != -1)
 		{
 			if (m_SelectedKeyframes.contains(keyframe))
@@ -320,7 +378,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 		switch (m_InteractionState)
 		{
 		case InteractionState::MoveOnly: {
-			// TODO: Implement abort move
+			restoreAnimationTracks();
 			m_SkipContextMenu = true;
 			m_InteractionState = InteractionState::None;
 			break;
@@ -328,7 +386,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 		case InteractionState::SelectMove: {
 			if (m_SelectMoveTresholdPassed)
 			{
-				// TODO: Implement abort move
+				restoreAnimationTracks();
 			}
 			else
 			{
@@ -345,7 +403,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 			break;
 		}
 		case InteractionState::MoveLeftHandleOnly: {
-			// TODO: Implement abort move
+			restoreAnimationTracks();
 			m_SkipContextMenu = true;
 			m_InteractionState = InteractionState::None;
 			break;
@@ -353,7 +411,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 		case InteractionState::SelectMoveLeftHandle: {
 			if (m_SelectMoveTresholdPassed)
 			{
-				// TODO: Implement abort move
+				restoreAnimationTracks();
 			}
 			else
 			{
@@ -367,7 +425,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 			break;
 		}
 		case InteractionState::MoveRightHandleOnly: {
-			// TODO: Implement abort move
+			restoreAnimationTracks();
 			m_SkipContextMenu = true;
 			m_InteractionState = InteractionState::None;
 			break;
@@ -375,7 +433,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 		case InteractionState::SelectMoveRightHandle: {
 			if (m_SelectMoveTresholdPassed)
 			{
-				// TODO: Implement abort move
+				restoreAnimationTracks();
 			}
 			else
 			{
@@ -424,7 +482,8 @@ void AnimationCurveEditor::mouseReleaseEvent(QMouseEvent *event)
 	{
 		if (m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::SelectMove)
 		{
-			// TODO: Apply the move operation to selected keyframes
+			// Apply the move operation to selected keyframes
+			m_BackupAnimationTracks.clear();
 		}
 		else if (m_InteractionState == InteractionState::MultiSelect)
 		{
@@ -572,6 +631,9 @@ double AnimationCurveEditor::timeAtX(int x) const
 
 ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos, AnimationTrack **trackRes) const
 {
+	if (pos.isNull())
+		return -1;
+
 	int keyframeHalfSize = 6;
 	for (QList<AnimationTrack *>::const_iterator trackIt = m_AnimationTracks.end(); trackIt != m_AnimationTracks.begin();)
 	{
@@ -607,6 +669,9 @@ ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos, AnimationT
 
 ptrdiff_t AnimationCurveEditor::leftHandleAtPosition(const QPoint &pos, AnimationTrack **trackRes) const
 {
+	if (pos.isNull())
+		return -1;
+
 	int handleHalfSize = 3;
 	for (QList<AnimationTrack *>::const_iterator trackIt = m_AnimationTracks.end(); trackIt != m_AnimationTracks.begin();)
 	{
@@ -628,7 +693,9 @@ ptrdiff_t AnimationCurveEditor::leftHandleAtPosition(const QPoint &pos, Animatio
 						--it;
 						QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
 						const double scale = 1.0;
-						QPoint handleOffset = keyframePointOffset(it.value().Interpolation.Bezier.InTangentX * scale, it.value().Interpolation.Bezier.InTangentY * scale);
+						QPoint handleOffset = keyframePointOffset(
+						    it.value().Interpolation.Bezier.InTangentX * scale,
+						    -it.value().Interpolation.Bezier.InTangentY * scale);
 						QPoint handlePoint = keyframePos + handleOffset;
 						if (abs(handlePoint.x() - pos.x()) <= handleHalfSize && abs(handlePoint.y() - pos.y()) <= handleHalfSize)
 						{
@@ -648,6 +715,9 @@ ptrdiff_t AnimationCurveEditor::leftHandleAtPosition(const QPoint &pos, Animatio
 
 ptrdiff_t AnimationCurveEditor::rightHandleAtPosition(const QPoint &pos, AnimationTrack **trackRes) const
 {
+	if (pos.isNull())
+		return -1;
+
 	int handleHalfSize = 3;
 	for (QList<AnimationTrack *>::const_iterator trackIt = m_AnimationTracks.end(); trackIt != m_AnimationTracks.begin();)
 	{
@@ -669,7 +739,9 @@ ptrdiff_t AnimationCurveEditor::rightHandleAtPosition(const QPoint &pos, Animati
 						--it;
 						QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
 						const double scale = 1.0;
-						QPoint handleOffset = keyframePointOffset(it.value().Interpolation.Bezier.OutTangentX * scale, it.value().Interpolation.Bezier.OutTangentY * scale);
+						QPoint handleOffset = keyframePointOffset(
+						    it.value().Interpolation.Bezier.OutTangentX * scale,
+						    -it.value().Interpolation.Bezier.OutTangentY * scale);
 						QPoint handlePoint = keyframePos + handleOffset;
 						if (abs(handlePoint.x() - pos.x()) <= handleHalfSize && abs(handlePoint.y() - pos.y()) <= handleHalfSize)
 						{
@@ -1221,9 +1293,13 @@ void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 				{
 					const double scale = 1.0;
 					const int handleHalfSize = 3;
-					QPoint leftOffset = keyframePointOffset(it.value().Interpolation.Bezier.InTangentX * scale, it.value().Interpolation.Bezier.InTangentY * scale);
+					QPoint leftOffset = keyframePointOffset(
+					    it.value().Interpolation.Bezier.InTangentX * scale,
+					    -it.value().Interpolation.Bezier.InTangentY * scale);
 					QPoint leftPoint = point + leftOffset;
-					QPoint rightOffset = keyframePointOffset(it.value().Interpolation.Bezier.OutTangentX * scale, it.value().Interpolation.Bezier.OutTangentY * scale);
+					QPoint rightOffset = keyframePointOffset(
+					    it.value().Interpolation.Bezier.OutTangentX * scale,
+					    -it.value().Interpolation.Bezier.OutTangentY * scale);
 					QPoint rightPoint = point + rightOffset;
 					QRect leftHandleRect = QRect(leftPoint.x() - handleHalfSize, leftPoint.y() - handleHalfSize, handleHalfSize * 2, handleHalfSize * 2);
 					QRect rightHandleRect = QRect(rightPoint.x() - handleHalfSize, rightPoint.y() - handleHalfSize, handleHalfSize * 2, handleHalfSize * 2);
@@ -1275,17 +1351,17 @@ void AnimationCurveEditor::removeKeyframe()
 
 void AnimationCurveEditor::onContextMenuClosed()
 {
-	// Implement handling the closing of the context menu
+	// ...
 }
 
 void AnimationCurveEditor::enterEvent(QEnterEvent *event)
 {
-	// Implement enter event handling
+	// ...
 }
 
 void AnimationCurveEditor::leaveEvent(QEvent *event)
 {
-	// Implement leave event handling
+	updateMousePosition(QPoint(), false);
 }
 
 bool AnimationCurveEditor::eventFilter(QObject *watched, QEvent *event)

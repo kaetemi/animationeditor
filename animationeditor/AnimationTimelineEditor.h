@@ -141,7 +141,7 @@ private:
 	QList<AnimationTrack *> m_AnimationTracks;
 
 	// Original animation tracks backup
-	QList<AnimationTrack::KeyframeMap> m_OriginalAnimationTracks;
+	QList<AnimationTrack::KeyframeMap> m_BackupAnimationTracks;
 
 	// Keyframe selection and backup
 	QSet<ptrdiff_t> m_SelectedKeyframes;

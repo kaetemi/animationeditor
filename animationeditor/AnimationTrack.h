@@ -102,9 +102,9 @@ struct ANIMATIONEDITOR_EXPORT AnimationKeyframe
 		} EaseInOut;
 	} Interpolation;
 
-	// Constructor for Linear interpolation
+	// Default null keyframe constructor
 	AnimationKeyframe()
-	    : Id(s_NextId)
+	    : Id(-1)
 	    , Value(0.0)
 	{
 		Interpolation.Bezier.InTangentX = 0.0;

@@ -131,10 +131,12 @@ private:
 	// Mouse interaction helper functions
 	void updateMousePosition(const QPoint &pos, bool ctrlHeld);
 	void updateMouseSelection(bool ctrlHeld);
+	void restoreAnimationTracks();
 
 private:
 	QTreeWidget *m_DimensionalReference;
 	QList<AnimationTrack *> m_AnimationTracks;
+	QList<AnimationTrack::KeyframeMap> m_BackupAnimationTracks;
 	InteractionState m_InteractionState = InteractionState::None;
 	QSet<ptrdiff_t> m_SelectedKeyframes;
 	QSet<ptrdiff_t> m_SelectedLeftInterpolationHandles;

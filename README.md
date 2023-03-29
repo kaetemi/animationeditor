@@ -4,7 +4,7 @@ The AnimationEditor is a QWidget for Qt, which allows developers to create, edit
 
 ![Animation Editor](https://raw.githubusercontent.com/kaetemi/animationeditor/master/doc/screenshot.png "Screenshot")
 
-The main components of the AnimationEditor include:
+The main components of the animation editor include:
 1. `AnimationEditor`: The main QWidget that combines and manages all other sub-widgets.
 2. `AnimationTrack`: A QObject representing a track with its keyframes and associated data.
 3. `AnimationTimelineEditor`: A QWidget for visualizing and editing keyframes in a timeline view, showing rows for all the tracks with handles for keyframes.
