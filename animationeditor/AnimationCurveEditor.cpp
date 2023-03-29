@@ -280,6 +280,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 	if (event->button() == Qt::LeftButton)
 	{
 		m_MouseLeftPressPosition = pos;
+		m_MouseLeftPressTimeValue = timeValueAtXY(pos);
 		ptrdiff_t keyframe = m_HoverKeyframe;
 		ptrdiff_t leftHandle = m_HoverLeftInterpolationHandle;
 		ptrdiff_t rightHandle = m_HoverRightInterpolationHandle;
@@ -374,6 +375,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 	if (event->button() == Qt::RightButton)
 	{
 		m_MouseRightPressPosition = pos;
+		m_MouseRightPressTimeValue = timeValueAtXY(pos);
 		ptrdiff_t keyframe = m_HoverKeyframe;
 		switch (m_InteractionState)
 		{
@@ -495,6 +497,7 @@ void AnimationCurveEditor::mouseReleaseEvent(QMouseEvent *event)
 
 		m_InteractionState = InteractionState::None;
 		m_MouseLeftPressPosition = QPoint();
+		m_MouseLeftPressTimeValue = QPointF();
 		m_ActiveKeyframe = -1;
 		m_ActiveTrack = nullptr;
 	}
@@ -503,6 +506,7 @@ void AnimationCurveEditor::mouseReleaseEvent(QMouseEvent *event)
 	{
 		m_InteractionState = InteractionState::None;
 		m_MouseRightPressPosition = QPoint();
+		m_MouseRightPressTimeValue = QPointF();
 		m_ActiveKeyframe = -1;
 		m_ActiveTrack = nullptr;
 	}
@@ -524,6 +528,8 @@ void AnimationCurveEditor::contextMenuEvent(QContextMenuEvent *event)
 
 void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 {
+	bool needRecalculate = false;
+
 	double scrollAmount = event->angleDelta().y() / 8.0;
 	double scaleFactor = 1 + scrollAmount / 120.0;
 
@@ -531,8 +537,7 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 	if (event->modifiers() == Qt::NoModifier || event->modifiers() == Qt::ControlModifier)
 	{
 		m_VerticalPixelPerValue *= scaleFactor;
-		if (event->modifiers() != Qt::ControlModifier)
-			recalculateGridInverval(); // Redraw the widget
+		needRecalculate = true;
 	}
 	// Change the from/to time range when the Shift key is held, or Control is held
 	if (event->modifiers() == Qt::ShiftModifier || event->modifiers() == Qt::ControlModifier)
@@ -550,7 +555,20 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 		m_FromTime -= timeDiff * timeDiffRatio;
 		m_ToTime += timeDiff * (1.0 - timeDiffRatio);
 		emit rangeChanged(m_FromTime, m_ToTime);
+		needRecalculate = true;
+	}
+	if (needRecalculate)
+	{
 		recalculateGridInverval(); // Redraw the widget
+		if (!m_MouseLeftPressPosition.isNull() || !m_MouseLeftPressTimeValue.isNull())
+		{
+			m_MouseLeftPressPosition = keyframePoint(m_MouseLeftPressTimeValue.x(), m_MouseLeftPressTimeValue.y());
+		}
+		if (!m_MouseRightPressPosition.isNull() || !m_MouseRightPressTimeValue.isNull())
+		{
+			m_MouseRightPressPosition = keyframePoint(m_MouseRightPressTimeValue.x(), m_MouseRightPressTimeValue.y());
+		}
+		updateMousePosition(event->position().toPoint(), event->modifiers() & Qt::ControlModifier);
 	}
 }
 
@@ -628,6 +646,19 @@ double AnimationCurveEditor::timeAtX(int x) const
 	double xNormalized = (x - grid.left()) / static_cast<double>(grid.width());
 	double time = m_FromTime + xNormalized * (m_ToTime - m_FromTime);
 	return time;
+}
+
+QPointF AnimationCurveEditor::timeValueAtXY(const QPoint &pos) const
+{
+	QRect grid = gridRect();
+
+	double xNormalized = (pos.x() - grid.left()) / static_cast<double>(grid.width());
+	double time = m_FromTime + xNormalized * (m_ToTime - m_FromTime);
+
+	double normalizedValue = grid.center().y() - pos.y();
+	double value = (normalizedValue / m_VerticalPixelPerValue) + m_VerticalCenterValue;
+
+	return QPointF(time, value);
 }
 
 ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos, AnimationTrack **trackRes) const

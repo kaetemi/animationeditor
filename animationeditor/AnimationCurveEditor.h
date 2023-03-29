@@ -113,6 +113,7 @@ private:
 	QPoint keyframePoint(double time, double value) const;
 	double timeAtX(double x) const;
 	double timeAtX(int x) const;
+	QPointF timeValueAtXY(const QPoint &pos) const;
 	ptrdiff_t keyframeAtPosition(const QPoint &pos, AnimationTrack **trackRes = nullptr) const;
 	ptrdiff_t leftHandleAtPosition(const QPoint &pos, AnimationTrack **trackRes = nullptr) const;
 	ptrdiff_t rightHandleAtPosition(const QPoint &pos, AnimationTrack **trackRes = nullptr) const;
@@ -155,7 +156,9 @@ private:
 	ptrdiff_t m_HoverRightInterpolationHandle = -1;
 	AnimationTrack *m_HoverTrack = nullptr;
 	QPoint m_MouseLeftPressPosition;
+	QPointF m_MouseLeftPressTimeValue;
 	QPoint m_MouseRightPressPosition;
+	QPointF m_MouseRightPressTimeValue;
 	QPoint m_MouseMovePosition;
 	bool m_SkipContextMenu = false;
 	bool m_SelectMoveTresholdPassed = false;
