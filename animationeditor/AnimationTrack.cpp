@@ -215,8 +215,8 @@ void AnimationTrack::setRandomColor()
 	if (trackName.contains("X"))
 	{
 		hue = rng.generate() % 10;
-		hue -= 5;
-		hue = std::clamp(hue, 0, 359);
+		hue += (360 - 5);
+		hue %= 360;
 	}
 	else if (trackName.contains("Y"))
 	{

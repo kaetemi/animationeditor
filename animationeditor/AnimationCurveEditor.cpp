@@ -102,15 +102,64 @@ QSet<ptrdiff_t> AnimationCurveEditor::keyframeSelection() const
 void AnimationCurveEditor::updateMousePosition(const QPoint &pos, bool ctrlHeld)
 {
 	m_MouseMovePosition = pos;
+	bool wantUpdate = false;
+
+	// Update hover
 	AnimationTrack *track = nullptr;
-	ptrdiff_t keyframe = keyframeAtPosition(pos, &track);
-	if (keyframe != m_HoverKeyframe || track != m_HoverTrack)
 	{
-		m_HoverKeyframe = keyframe;
-		m_HoverTrack = track;
-		update();
+		ptrdiff_t keyframe = keyframeAtPosition(pos, &track);
+
+		if (keyframe != m_HoverKeyframe)
+		{
+			m_HoverKeyframe = keyframe;
+			if (keyframe != -1)
+			{
+				m_HoverLeftInterpolationHandle = -1;
+				m_HoverRightInterpolationHandle = -1;
+			}
+			wantUpdate = true;
+		}
+
+		if (keyframe == -1)
+		{
+			ptrdiff_t rightHandle = rightHandleAtPosition(pos, &track);
+
+			if (rightHandle != m_HoverRightInterpolationHandle)
+			{
+				m_HoverRightInterpolationHandle = rightHandle;
+				if (rightHandle != -1)
+				{
+					m_HoverKeyframe = -1;
+					m_HoverLeftInterpolationHandle = -1;
+					;
+				}
+				wantUpdate = true;
+			}
+
+			if (rightHandle == -1)
+			{
+				ptrdiff_t leftHandle = leftHandleAtPosition(pos, &track);
+
+				if (leftHandle != m_HoverLeftInterpolationHandle)
+				{
+					m_HoverLeftInterpolationHandle = leftHandle;
+					if (leftHandle != -1)
+					{
+						m_HoverKeyframe = -1;
+						m_HoverRightInterpolationHandle = -1;
+					}
+					wantUpdate = true;
+				}
+			}
+		}
 	}
-	else if (m_InteractionState != InteractionState::None)
+	if (track != m_HoverTrack)
+	{
+		m_HoverTrack = track;
+		wantUpdate = true;
+	}
+
+	if (m_InteractionState != InteractionState::None)
 	{
 		if (m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::SelectMove)
 		{
@@ -141,8 +190,11 @@ void AnimationCurveEditor::updateMousePosition(const QPoint &pos, bool ctrlHeld)
 			updateMouseSelection(ctrlHeld);
 		}
 
-		update();
+		wantUpdate = true;
 	}
+
+	if (wantUpdate)
+		update();
 }
 
 void AnimationCurveEditor::updateMouseSelection(bool ctrlHeld)
@@ -435,6 +487,88 @@ ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos, AnimationT
 	return -1;
 }
 
+ptrdiff_t AnimationCurveEditor::leftHandleAtPosition(const QPoint &pos, AnimationTrack **trackRes) const
+{
+	int handleHalfSize = 3;
+	for (QList<AnimationTrack *>::const_iterator trackIt = m_AnimationTracks.end(); trackIt != m_AnimationTracks.begin();)
+	{
+		--trackIt;
+		AnimationTrack *track = *trackIt;
+		if (track->interpolationMethod() == AnimationInterpolation::Bezier)
+		{
+			const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
+			if (keyframes.begin() != keyframes.end())
+			{
+				// Check if the pos time is between the first and last keyframe (not entirely accurate on the rounding)
+				// double firstTime = keyframes.begin().key() - keyframes.begin().value().Interpolation.Bezier.InTangentX;
+				// double lastTime = std::prev(keyframes.end()).key() - std::prev(keyframes.end()).value().Interpolation.Bezier.OutTangentX;
+				// if (timeAtX(pos.x() + handleHalfSize) >= firstTime && timeAtX(pos.x() - handleHalfSize) <= lastTime)
+				{
+					// Find the keyframe at the given position
+					for (AnimationTrack::KeyframeMap::const_iterator it = keyframes.constEnd(); it != keyframes.constBegin();)
+					{
+						--it;
+						QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
+						const double scale = 1.0;
+						QPoint handleOffset = keyframePointOffset(it.value().Interpolation.Bezier.InTangentX * scale, it.value().Interpolation.Bezier.InTangentY * scale);
+						QPoint handlePoint = keyframePos + handleOffset;
+						if (abs(handlePoint.x() - pos.x()) <= handleHalfSize && abs(handlePoint.y() - pos.y()) <= handleHalfSize)
+						{
+							if (trackRes)
+								*trackRes = track;
+							return it.value().Id;
+						}
+					}
+				}
+			}
+		}
+	}
+	if (trackRes)
+		*trackRes = nullptr;
+	return -1;
+}
+
+ptrdiff_t AnimationCurveEditor::rightHandleAtPosition(const QPoint &pos, AnimationTrack **trackRes) const
+{
+	int handleHalfSize = 3;
+	for (QList<AnimationTrack *>::const_iterator trackIt = m_AnimationTracks.end(); trackIt != m_AnimationTracks.begin();)
+	{
+		--trackIt;
+		AnimationTrack *track = *trackIt;
+		if (track->interpolationMethod() == AnimationInterpolation::Bezier)
+		{
+			const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
+			if (keyframes.begin() != keyframes.end())
+			{
+				// Check if the pos time is between the first and last keyframe (not entirely accurate on the rounding)
+				// double firstTime = keyframes.begin().key() - keyframes.begin().value().Interpolation.Bezier.InTangentX;
+				// double lastTime = std::prev(keyframes.end()).key() + std::prev(keyframes.end()).value().Interpolation.Bezier.OutTangentX;
+				// if (timeAtX(pos.x() + handleHalfSize) >= firstTime && timeAtX(pos.x() - handleHalfSize) <= lastTime)
+				{
+					// Find the keyframe at the given position
+					for (AnimationTrack::KeyframeMap::const_iterator it = keyframes.constEnd(); it != keyframes.constBegin();)
+					{
+						--it;
+						QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
+						const double scale = 1.0;
+						QPoint handleOffset = keyframePointOffset(it.value().Interpolation.Bezier.OutTangentX * scale, it.value().Interpolation.Bezier.OutTangentY * scale);
+						QPoint handlePoint = keyframePos + handleOffset;
+						if (abs(handlePoint.x() - pos.x()) <= handleHalfSize && abs(handlePoint.y() - pos.y()) <= handleHalfSize)
+						{
+							if (trackRes)
+								*trackRes = track;
+							return it.value().Id;
+						}
+					}
+				}
+			}
+		}
+	}
+	if (trackRes)
+		*trackRes = nullptr;
+	return -1;
+}
+
 QSet<ptrdiff_t> AnimationCurveEditor::keyframesAtPosition(const QPoint &pos) const
 {
 	int keyframeHalfSize = 6;
@@ -698,12 +832,13 @@ void AnimationCurveEditor::paintInterpolationHandle(QPainter &painter, const QRe
 	if (selected)
 	{
 		baseColor = palette().color(QPalette::Highlight);
+		baseColor.setHsl((baseColor.hue() + 180) % 360, baseColor.saturation(), baseColor.lightness());
 		lightColor = baseColor.lighter(150);
 		darkColor = baseColor.darker(125);
 	}
 	else
 	{
-		baseColor = lerp(palette().color(QPalette::Button), palette().color(QPalette::ButtonText), 0.4);
+		baseColor = lerp(palette().color(QPalette::Button), palette().color(QPalette::ButtonText), 0.3);
 		lightColor = baseColor.lighter(110);
 		darkColor = baseColor.darker(110);
 	}
@@ -962,19 +1097,26 @@ void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 			if (track->interpolationMethod() == AnimationInterpolation::Bezier)
 			{
 				const double scale = 1.0;
+				const int handleHalfSize = 3;
 				QPoint leftOffset = keyframePointOffset(it.value().Interpolation.Bezier.InTangentX * scale, it.value().Interpolation.Bezier.InTangentY * scale);
 				QPoint leftPoint = point + leftOffset;
 				QPoint rightOffset = keyframePointOffset(it.value().Interpolation.Bezier.OutTangentX * scale, it.value().Interpolation.Bezier.OutTangentY * scale);
 				QPoint rightPoint = point + rightOffset;
-				QRect leftHandleRect = QRect(leftPoint.x() - 4, leftPoint.y() - 4, 8, 8);
-				QRect rightHandleRect = QRect(rightPoint.x() - 4, rightPoint.y() - 4, 8, 8);
+				QRect leftHandleRect = QRect(leftPoint.x() - handleHalfSize, leftPoint.y() - handleHalfSize, handleHalfSize * 2, handleHalfSize * 2);
+				QRect rightHandleRect = QRect(rightPoint.x() - handleHalfSize, rightPoint.y() - handleHalfSize, handleHalfSize * 2, handleHalfSize * 2);
 				painter.setRenderHint(QPainter::Antialiasing, true);
 				painter.setPen(handlePen);
 				painter.drawLine(point, leftPoint);
 				painter.drawLine(point, rightPoint);
 				painter.setRenderHint(QPainter::Antialiasing, false);
-				paintInterpolationHandle(painter, leftHandleRect, true, false, false);
-				paintInterpolationHandle(painter, rightHandleRect, true, false, false);
+				bool leftSelected = m_SelectedLeftInterpolationHandles.contains(it.value().Id);
+				bool leftHover = m_HoverLeftInterpolationHandle == it.value().Id;
+				bool leftActive = (m_ActiveLeftInterpolationHandle == it.value().Id) && leftHover;
+				paintInterpolationHandle(painter, leftHandleRect, leftSelected, leftHover, leftActive);
+				bool rightSelected = m_SelectedRightInterpolationHandles.contains(it.value().Id);
+				bool rightHover = m_HoverRightInterpolationHandle == it.value().Id;
+				bool rightActive = (m_ActiveRightInterpolationHandle == it.value().Id) && rightHover;
+				paintInterpolationHandle(painter, rightHandleRect, rightSelected, rightHover, rightActive);
 			}
 			bool selected = m_SelectedKeyframes.contains(it.value().Id);
 			bool hover = m_HoverKeyframe == it.value().Id;

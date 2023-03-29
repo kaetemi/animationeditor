@@ -110,6 +110,8 @@ private:
 	double timeAtX(double x) const;
 	double timeAtX(int x) const;
 	ptrdiff_t keyframeAtPosition(const QPoint &pos, AnimationTrack **trackRes = nullptr) const;
+	ptrdiff_t leftHandleAtPosition(const QPoint &pos, AnimationTrack **trackRes = nullptr) const;
+	ptrdiff_t rightHandleAtPosition(const QPoint &pos, AnimationTrack **trackRes = nullptr) const;
 	QSet<ptrdiff_t> keyframesAtPosition(const QPoint &pos) const;
 	QSet<ptrdiff_t> keyframesInRect(const QRect &rect) const;
 	void recalculateGridInverval();
@@ -139,6 +141,8 @@ private:
 
 	// Mouse interaction state
 	ptrdiff_t m_ActiveKeyframe = -1;
+	ptrdiff_t m_ActiveLeftInterpolationHandle = -1;
+	ptrdiff_t m_ActiveRightInterpolationHandle = -1;
 	AnimationTrack *m_ActiveTrack = nullptr;
 	ptrdiff_t m_HoverKeyframe = -1;
 	ptrdiff_t m_HoverLeftInterpolationHandle = -1;

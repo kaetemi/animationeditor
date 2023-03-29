@@ -84,9 +84,9 @@ int main(int argc, char *argv[])
 		else if (i == 3)
 			track2->setName("Track Z");
 		track2->setInterpolationMethod(AnimationInterpolation::Bezier);
-		track2->upsertKeyframe(0.5 + i, AnimationKeyframe(2.0 + i * -0.2, -0.01, 0.0, 0.01, 0.0));
-		track2->upsertKeyframe(1.5 + i, AnimationKeyframe(3.0 + i * -0.8, -0.02, 0.0, 0.02, 0.0));
-		track2->upsertKeyframe(2.5 + i, AnimationKeyframe(2.0 + i * -0.4, -0.01, 0.0, 0.01, 0.0));
+		track2->upsertKeyframe(0.5 + i, AnimationKeyframe(2.0 + i * -0.2, -0.1, 0.0, 0.1, 0.0));
+		track2->upsertKeyframe(1.5 + i, AnimationKeyframe(3.0 + i * -0.8, -0.2, 0.0, 0.2, 0.0));
+		track2->upsertKeyframe(2.5 + i, AnimationKeyframe(2.0 + i * -0.4, -0.1, 0.0, 0.1, 0.0));
 		track2->setRandomColor();
 	}
 
