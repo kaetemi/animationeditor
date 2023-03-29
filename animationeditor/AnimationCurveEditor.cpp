@@ -253,9 +253,25 @@ QSet<ptrdiff_t> AnimationCurveEditor::keyframesAtPosition(const QPoint &pos) con
 	}
 	return res;
 }
-QSet<ptrdiff_t> AnimationCurveEditor::keyframesInRect(const QPoint &pos) const
+
+QSet<ptrdiff_t> AnimationCurveEditor::keyframesInRect(const QRect &rect) const
 {
+	int keyframeHalfSize = 6;
+	QRect expandedRect = rect.adjusted(-keyframeHalfSize, -keyframeHalfSize, keyframeHalfSize, keyframeHalfSize);
 	QSet<ptrdiff_t> res;
+
+	for (AnimationTrack *track : m_AnimationTracks)
+	{
+		const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
+		for (auto it = keyframes.begin(); it != keyframes.end(); ++it)
+		{
+			QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
+			if (expandedRect.contains(keyframePos))
+			{
+				res.insert(it.value().Id);
+			}
+		}
+	}
 	return res;
 }
 
@@ -620,7 +636,6 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 	}
 	painter.drawPath(path);
 }
-
 
 void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 {

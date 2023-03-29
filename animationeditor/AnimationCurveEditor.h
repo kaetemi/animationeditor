@@ -98,7 +98,7 @@ private:
 	double timeAtX(int x) const;
 	ptrdiff_t keyframeAtPosition(const QPoint &pos) const;
 	QSet<ptrdiff_t> keyframesAtPosition(const QPoint &pos) const;
-	QSet<ptrdiff_t> keyframesInRect(const QPoint &pos) const;
+	QSet<ptrdiff_t> keyframesInRect(const QRect &rect) const;
 	void recalculateGridInverval();
 
 	// Paint and layout helper functions
@@ -138,7 +138,6 @@ private:
 	double m_VerticalPixelPerValue = 400.0 / 10.0;
 	double m_FromTime = 0.0;
 	double m_ToTime = 10.0;
-
 };
 
 #endif /* ANIMATION_CURVE_EDITOR__H */
