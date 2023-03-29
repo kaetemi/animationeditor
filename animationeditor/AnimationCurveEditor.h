@@ -99,6 +99,10 @@ private:
 		None = 0,
 		SelectMove,
 		MoveOnly,
+		SelectMoveLeftHandle,
+		MoveLeftHandleOnly,
+		SelectMoveRightHandle,
+		MoveRightHandleOnly,
 		MultiSelect
 	};
 

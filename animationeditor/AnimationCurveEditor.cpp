@@ -161,10 +161,11 @@ void AnimationCurveEditor::updateMousePosition(const QPoint &pos, bool ctrlHeld)
 
 	if (m_InteractionState != InteractionState::None)
 	{
-		if (m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::SelectMove)
+		if (m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::SelectMove
+		    || m_InteractionState == InteractionState::MoveLeftHandleOnly || m_InteractionState == InteractionState::SelectMoveLeftHandle
+		    || m_InteractionState == InteractionState::MoveRightHandleOnly || m_InteractionState == InteractionState::SelectMoveRightHandle)
 		{
-
-			if (m_InteractionState == InteractionState::SelectMove && !m_SelectMoveTresholdPassed)
+			if (!m_SelectMoveTresholdPassed && (m_InteractionState == InteractionState::SelectMove || m_InteractionState == InteractionState::SelectMoveLeftHandle || m_InteractionState == InteractionState::SelectMoveRightHandle))
 			{
 				int dx = pos.x() - m_MouseLeftPressPosition.x();
 				int dy = pos.y() - m_MouseLeftPressPosition.y();
@@ -174,14 +175,25 @@ void AnimationCurveEditor::updateMousePosition(const QPoint &pos, bool ctrlHeld)
 				}
 			}
 
-			if (m_InteractionState == InteractionState::MoveOnly || m_SelectMoveTresholdPassed)
+			if (m_SelectMoveTresholdPassed && (m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::MoveLeftHandleOnly || m_InteractionState == InteractionState::MoveRightHandleOnly))
 			{
 				// Calculate the delta movement in time and value
 				double timeDelta = timeAtX(pos.x()) - timeAtX(m_MouseLeftPressPosition.x());
 				double valueDelta = (pos.y() - m_MouseLeftPressPosition.y()) / m_VerticalPixelPerValue;
 
-				// Move the selected keyframes relative to the backup position
-				// TODO
+				// Move the selected keyframes or handles relative to the backup position
+				if (m_InteractionState == InteractionState::MoveOnly)
+				{
+					// TODO
+				}
+				else if (m_InteractionState == InteractionState::MoveLeftHandleOnly)
+				{
+					// TODO
+				}
+				else if (m_InteractionState == InteractionState::MoveRightHandleOnly)
+				{
+					// TODO
+				}
 			}
 		}
 		else if (m_InteractionState == InteractionState::MultiSelect)
@@ -220,7 +232,11 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 	{
 		m_MouseLeftPressPosition = pos;
 		ptrdiff_t keyframe = m_HoverKeyframe;
-		m_ActiveKeyframe = m_HoverKeyframe;
+		ptrdiff_t leftHandle = m_HoverLeftInterpolationHandle;
+		ptrdiff_t rightHandle = m_HoverRightInterpolationHandle;
+		m_ActiveKeyframe = keyframe;
+		m_ActiveLeftInterpolationHandle = leftHandle;
+		m_ActiveRightInterpolationHandle = rightHandle;
 		m_ActiveTrack = m_HoverTrack;
 		if (keyframe != -1)
 		{
@@ -231,19 +247,67 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 			else
 			{
 				m_BackupSelectedKeyframes = m_SelectedKeyframes;
+				m_BackupSelectedLeftInterpolationHandles = m_SelectedLeftInterpolationHandles;
+				m_BackupSelectedRightInterpolationHandles = m_SelectedRightInterpolationHandles;
 				if (!ctrlHeld)
 				{
 					m_SelectedKeyframes.clear();
+					m_SelectedLeftInterpolationHandles.clear();
+					m_SelectedRightInterpolationHandles.clear();
 				}
 				m_SelectedKeyframes.insert(keyframe);
 				m_InteractionState = InteractionState::SelectMove;
 				m_SelectMoveTresholdPassed = false;
 			}
 		}
+		else if (leftHandle != -1)
+		{
+			if (m_SelectedLeftInterpolationHandles.contains(leftHandle))
+			{
+				m_InteractionState = InteractionState::MoveLeftHandleOnly;
+			}
+			else
+			{
+				m_BackupSelectedLeftInterpolationHandles = m_SelectedLeftInterpolationHandles;
+				m_BackupSelectedRightInterpolationHandles = m_SelectedRightInterpolationHandles;
+				if (!ctrlHeld)
+				{
+					m_SelectedLeftInterpolationHandles.clear();
+					m_SelectedRightInterpolationHandles.clear();
+				}
+				m_SelectedLeftInterpolationHandles.insert(leftHandle);
+				m_InteractionState = InteractionState::SelectMoveLeftHandle;
+				m_SelectMoveTresholdPassed = false;
+			}
+		}
+		else if (rightHandle != -1)
+		{
+			if (m_SelectedRightInterpolationHandles.contains(rightHandle))
+			{
+				m_InteractionState = InteractionState::MoveRightHandleOnly;
+			}
+			else
+			{
+				m_BackupSelectedLeftInterpolationHandles = m_SelectedLeftInterpolationHandles;
+				m_BackupSelectedRightInterpolationHandles = m_SelectedRightInterpolationHandles;
+				if (!ctrlHeld)
+				{
+					m_SelectedLeftInterpolationHandles.clear();
+					m_SelectedRightInterpolationHandles.clear();
+				}
+				m_SelectedRightInterpolationHandles.insert(rightHandle);
+				m_InteractionState = InteractionState::SelectMoveRightHandle;
+				m_SelectMoveTresholdPassed = false;
+			}
+		}
 		else
 		{
 			m_BackupSelectedKeyframes = m_SelectedKeyframes;
+			m_BackupSelectedLeftInterpolationHandles = m_SelectedLeftInterpolationHandles;
+			m_BackupSelectedRightInterpolationHandles = m_SelectedRightInterpolationHandles;
 			m_SelectedKeyframes.clear();
+			m_SelectedLeftInterpolationHandles.clear();
+			m_SelectedRightInterpolationHandles.clear();
 			m_InteractionState = InteractionState::MultiSelect;
 			updateMouseSelection(ctrlHeld);
 		}
@@ -270,15 +334,67 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 			{
 				// Only abort selection if we didn't move, the abort is just to abort the movement!
 				m_SelectedKeyframes = m_BackupSelectedKeyframes;
+				m_SelectedLeftInterpolationHandles = m_BackupSelectedLeftInterpolationHandles;
+				m_SelectedRightInterpolationHandles = m_BackupSelectedRightInterpolationHandles;
 			}
 			m_BackupSelectedKeyframes.clear();
+			m_BackupSelectedLeftInterpolationHandles.clear();
+			m_BackupSelectedRightInterpolationHandles.clear();
+			m_SkipContextMenu = true;
+			m_InteractionState = InteractionState::None;
+			break;
+		}
+		case InteractionState::MoveLeftHandleOnly: {
+			// TODO: Implement abort move
+			m_SkipContextMenu = true;
+			m_InteractionState = InteractionState::None;
+			break;
+		}
+		case InteractionState::SelectMoveLeftHandle: {
+			if (m_SelectMoveTresholdPassed)
+			{
+				// TODO: Implement abort move
+			}
+			else
+			{
+				m_SelectedLeftInterpolationHandles = m_BackupSelectedLeftInterpolationHandles;
+				m_SelectedRightInterpolationHandles = m_BackupSelectedRightInterpolationHandles;
+			}
+			m_BackupSelectedLeftInterpolationHandles.clear();
+			m_BackupSelectedRightInterpolationHandles.clear();
+			m_SkipContextMenu = true;
+			m_InteractionState = InteractionState::None;
+			break;
+		}
+		case InteractionState::MoveRightHandleOnly: {
+			// TODO: Implement abort move
+			m_SkipContextMenu = true;
+			m_InteractionState = InteractionState::None;
+			break;
+		}
+		case InteractionState::SelectMoveRightHandle: {
+			if (m_SelectMoveTresholdPassed)
+			{
+				// TODO: Implement abort move
+			}
+			else
+			{
+				m_SelectedLeftInterpolationHandles = m_BackupSelectedLeftInterpolationHandles;
+				m_SelectedRightInterpolationHandles = m_BackupSelectedRightInterpolationHandles;
+			}
+			m_BackupSelectedLeftInterpolationHandles.clear();
+			m_BackupSelectedRightInterpolationHandles.clear();
 			m_SkipContextMenu = true;
 			m_InteractionState = InteractionState::None;
 			break;
 		}
 		case InteractionState::MultiSelect: {
 			m_SelectedKeyframes = m_BackupSelectedKeyframes;
+			m_SelectedLeftInterpolationHandles = m_BackupSelectedLeftInterpolationHandles;
+			m_SelectedRightInterpolationHandles = m_BackupSelectedRightInterpolationHandles;
 			m_BackupSelectedKeyframes.clear();
+			m_BackupSelectedLeftInterpolationHandles.clear();
+			m_BackupSelectedRightInterpolationHandles.clear();
 			m_SkipContextMenu = true;
 			m_InteractionState = InteractionState::None;
 			break;
@@ -314,6 +430,8 @@ void AnimationCurveEditor::mouseReleaseEvent(QMouseEvent *event)
 		{
 			// Finalize the multi-selection
 			m_BackupSelectedKeyframes.clear();
+			m_BackupSelectedLeftInterpolationHandles.clear();
+			m_BackupSelectedRightInterpolationHandles.clear();
 		}
 
 		m_InteractionState = InteractionState::None;
@@ -1094,31 +1212,34 @@ void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 		for (AnimationTrack::KeyframeMap::const_iterator it = keyframes.begin(); it != keyframes.end(); ++it)
 		{
 			QPoint point = keyframePoint(it.key(), it.value().Value);
+			bool selected = m_SelectedKeyframes.contains(it.value().Id);
 			if (track->interpolationMethod() == AnimationInterpolation::Bezier)
 			{
-				const double scale = 1.0;
-				const int handleHalfSize = 3;
-				QPoint leftOffset = keyframePointOffset(it.value().Interpolation.Bezier.InTangentX * scale, it.value().Interpolation.Bezier.InTangentY * scale);
-				QPoint leftPoint = point + leftOffset;
-				QPoint rightOffset = keyframePointOffset(it.value().Interpolation.Bezier.OutTangentX * scale, it.value().Interpolation.Bezier.OutTangentY * scale);
-				QPoint rightPoint = point + rightOffset;
-				QRect leftHandleRect = QRect(leftPoint.x() - handleHalfSize, leftPoint.y() - handleHalfSize, handleHalfSize * 2, handleHalfSize * 2);
-				QRect rightHandleRect = QRect(rightPoint.x() - handleHalfSize, rightPoint.y() - handleHalfSize, handleHalfSize * 2, handleHalfSize * 2);
-				painter.setRenderHint(QPainter::Antialiasing, true);
-				painter.setPen(handlePen);
-				painter.drawLine(point, leftPoint);
-				painter.drawLine(point, rightPoint);
-				painter.setRenderHint(QPainter::Antialiasing, false);
 				bool leftSelected = m_SelectedLeftInterpolationHandles.contains(it.value().Id);
-				bool leftHover = m_HoverLeftInterpolationHandle == it.value().Id;
-				bool leftActive = (m_ActiveLeftInterpolationHandle == it.value().Id) && leftHover;
-				paintInterpolationHandle(painter, leftHandleRect, leftSelected, leftHover, leftActive);
 				bool rightSelected = m_SelectedRightInterpolationHandles.contains(it.value().Id);
-				bool rightHover = m_HoverRightInterpolationHandle == it.value().Id;
-				bool rightActive = (m_ActiveRightInterpolationHandle == it.value().Id) && rightHover;
-				paintInterpolationHandle(painter, rightHandleRect, rightSelected, rightHover, rightActive);
+				if (selected || leftSelected || rightSelected)
+				{
+					const double scale = 1.0;
+					const int handleHalfSize = 3;
+					QPoint leftOffset = keyframePointOffset(it.value().Interpolation.Bezier.InTangentX * scale, it.value().Interpolation.Bezier.InTangentY * scale);
+					QPoint leftPoint = point + leftOffset;
+					QPoint rightOffset = keyframePointOffset(it.value().Interpolation.Bezier.OutTangentX * scale, it.value().Interpolation.Bezier.OutTangentY * scale);
+					QPoint rightPoint = point + rightOffset;
+					QRect leftHandleRect = QRect(leftPoint.x() - handleHalfSize, leftPoint.y() - handleHalfSize, handleHalfSize * 2, handleHalfSize * 2);
+					QRect rightHandleRect = QRect(rightPoint.x() - handleHalfSize, rightPoint.y() - handleHalfSize, handleHalfSize * 2, handleHalfSize * 2);
+					painter.setRenderHint(QPainter::Antialiasing, true);
+					painter.setPen(handlePen);
+					painter.drawLine(point, leftPoint);
+					painter.drawLine(point, rightPoint);
+					painter.setRenderHint(QPainter::Antialiasing, false);
+					bool leftHover = m_HoverLeftInterpolationHandle == it.value().Id;
+					bool leftActive = (m_ActiveLeftInterpolationHandle == it.value().Id) && leftHover;
+					paintInterpolationHandle(painter, leftHandleRect, leftSelected, leftHover, leftActive);
+					bool rightHover = m_HoverRightInterpolationHandle == it.value().Id;
+					bool rightActive = (m_ActiveRightInterpolationHandle == it.value().Id) && rightHover;
+					paintInterpolationHandle(painter, rightHandleRect, rightSelected, rightHover, rightActive);
+				}
 			}
-			bool selected = m_SelectedKeyframes.contains(it.value().Id);
 			bool hover = m_HoverKeyframe == it.value().Id;
 			bool active = (m_ActiveKeyframe == it.value().Id) && hover;
 			QRect keyframeRect = QRect(point.x() - 6, point.y() - 6, 12, 12);
