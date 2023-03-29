@@ -139,41 +139,6 @@ void AnimationTimeScrubber::mouseReleaseEvent(QMouseEvent *event)
 	}
 }
 
-/*
-void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
-{
-	QPainter painter(this);
-	painter.setRenderHint(QPainter::Antialiasing);
-
-	int width = rulerWidth();
-	int height = rect().height();
-	int tickHeight = height / 3;
-
-	// Draw the background
-	painter.fillRect(rect(), Qt::white);
-
-	// Draw the tick marks and labels
-	for (int i = 0; i <= m_Duration; ++i)
-	{
-		int x = timeToPixel(i);
-		painter.setPen(Qt::black);
-		painter.drawLine(x, height - tickHeight, x, height);
-
-		QString label = QString::number(i);
-		QRect labelRect(x - 20, 0, 40, height - tickHeight - 2);
-		painter.drawText(labelRect, Qt::AlignCenter, label);
-	}
-
-	// Draw the scrubber handle
-	int handleX = timeToPixel(m_CurrentTime);
-	int handleHeight = height / 2;
-	QRect handleRect(handleX - 5, height - handleHeight - 1, 10, handleHeight);
-	painter.setPen(Qt::NoPen);
-	painter.setBrush(Qt::blue);
-	painter.drawRoundedRect(handleRect, 2, 2);
-}
-*/
-
 void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event);

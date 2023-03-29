@@ -212,8 +212,9 @@ ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos) const
 			if (timeAtX(pos.x()) >= firstTime && timeAtX(pos.x()) <= lastTime)
 			{
 				// Find the keyframe at the given position
-				for (auto it = keyframes.begin(); it != keyframes.end(); ++it)
+				for (AnimationTrack::KeyframeMap::const_iterator it = keyframes.constEnd(); it != keyframes.constBegin();)
 				{
+					--it;
 					QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
 					if (abs(keyframePos.x() - pos.x()) <= keyframeHalfSize && abs(keyframePos.y() - pos.y()) <= keyframeHalfSize)
 					{
@@ -589,8 +590,8 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 	const double fromX = keyframePointF(m_FromTime, 0).x(); // TODO: Adjust to 0 time aligned with framerate or pxStep
 	const double toX = keyframePointF(m_ToTime, 0).x(); // TODO: Adjust to 0 time aligned with framerate or pxStep
 
-	const QMap<double, AnimationKeyframe> &keyframes = track->keyframes();
-	QMap<double, AnimationKeyframe>::const_iterator it = keyframes.begin();
+	const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
+	AnimationTrack::KeyframeMap::const_iterator it = keyframes.begin();
 
 	// Check if the track has at least two keyframes
 	QPainterPath path;
@@ -672,9 +673,9 @@ void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 		painter.setRenderHint(QPainter::Antialiasing, true);
 		paintCurve(painter, track, curveColor);
 
-		const QMap<double, AnimationKeyframe> &keyframes = track->keyframes();
+		const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
 		painter.setRenderHint(QPainter::Antialiasing, false);
-		for (QMap<double, AnimationKeyframe>::const_iterator it = keyframes.begin(); it != keyframes.end(); ++it)
+		for (AnimationTrack::KeyframeMap::const_iterator it = keyframes.begin(); it != keyframes.end(); ++it)
 		{
 			QPoint point = keyframePoint(it.key(), it.value().Value);
 			bool isSelected = m_SelectedKeyframes.contains(it.value().Id);

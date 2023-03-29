@@ -409,7 +409,7 @@ void AnimationTimelineEditor::paintEvent(QPaintEvent *event)
 		painter.drawLine(trackRect.left(), trackRect.y() - 1, trackRect.right(), trackRect.y() - 1);
 
 		// Draw keyframes
-		for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
+		for (AnimationTrack::KeyframeMap::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 		{
 			QRect keyframeRect = this->keyframeRect(track, keyframe.key());
 			bool isSelected = m_SelectedKeyframes.contains(keyframe.value().Id);
@@ -455,8 +455,8 @@ ptrdiff_t AnimationTimelineEditor::keyframeAtPosition(AnimationTrack *track, con
 {
 	if (!track)
 		return -1;
-	const QMap<double, AnimationKeyframe> &keyframes = track->keyframes();
-	for (QMap<double, AnimationKeyframe>::const_iterator it = keyframes.constEnd(); it != keyframes.constBegin();)
+	const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
+	for (AnimationTrack::KeyframeMap::const_iterator it = keyframes.constEnd(); it != keyframes.constBegin();)
 	{
 		--it;
 		QRect keyframeRect = this->keyframeRect(track, it.key());
@@ -579,7 +579,7 @@ void AnimationTimelineEditor::mousePressEvent(QMouseEvent *event)
 			for (int i = 0; i < m_AnimationTracks.size(); ++i)
 			{
 				AnimationTrack *track = m_AnimationTracks[i];
-				QMap<double, AnimationKeyframe> &originalKeyframes = m_OriginalAnimationTracks[i];
+				AnimationTrack::KeyframeMap &originalKeyframes = m_OriginalAnimationTracks[i];
 				track->setKeyframes(originalKeyframes);
 				emit trackChanged(track);
 			}
@@ -600,7 +600,7 @@ void AnimationTimelineEditor::updateMouseSelection(bool ctrlHeld)
 		for (AnimationTrack *track : m_AnimationTracks)
 		{
 			QRect trackRect = visualTrackRectInWidgetSpace(track);
-			for (QMap<double, AnimationKeyframe>::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
+			for (AnimationTrack::KeyframeMap::const_iterator keyframe = track->keyframes().begin(); keyframe != track->keyframes().end(); ++keyframe)
 			{
 				QRect keyframeRect = this->keyframeRect(track, keyframe.key());
 				if (selectionRect.intersects(keyframeRect))
@@ -633,13 +633,13 @@ void AnimationTimelineEditor::mouseMoveEvent(QMouseEvent *event)
 		for (int i = 0; i < m_AnimationTracks.size(); ++i)
 		{
 			AnimationTrack *track = m_AnimationTracks[i];
-			QMap<double, AnimationKeyframe> &originalKeyframes = m_OriginalAnimationTracks[i];
+			AnimationTrack::KeyframeMap &originalKeyframes = m_OriginalAnimationTracks[i];
 
 			// Restore the original tracks before modifying keyframes
 			track->setKeyframes(originalKeyframes);
 			bool changed = false;
 
-			for (QMap<double, AnimationKeyframe>::const_iterator keyframe = originalKeyframes.begin(); keyframe != originalKeyframes.end(); ++keyframe)
+			for (AnimationTrack::KeyframeMap::const_iterator keyframe = originalKeyframes.begin(); keyframe != originalKeyframes.end(); ++keyframe)
 			{
 				if (m_SelectedKeyframes.contains(keyframe.value().Id))
 				{
