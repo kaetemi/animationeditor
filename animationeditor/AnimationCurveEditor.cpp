@@ -239,6 +239,16 @@ void AnimationCurveEditor::updateMousePosition(const QPoint &pos, bool ctrlHeld)
 			// Update the selection rectangle
 			updateMouseSelection(ctrlHeld);
 		}
+		else if (m_InteractionState == InteractionState::Pan)
+		{
+			QPointF tvFrom = timeValueAtXY(m_MouseMiddlePressPosition);
+			m_MouseMiddlePressTimeValue = tvFrom;
+			QPointF tvTo = timeValueAtXY(m_MouseMovePosition);
+			QPointF tvDiff = tvFrom - tvTo;
+			m_VerticalCenterValue = m_BackupVerticalCenterValue + tvDiff.y();
+			m_FromTime = m_BackupFromTime + tvDiff.x();
+			m_ToTime = m_BackupToTime + tvDiff.x();
+		}
 
 		wantUpdate = true;
 	}
@@ -277,7 +287,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 	bool ctrlHeld = event->modifiers() & Qt::ControlModifier;
 	updateMousePosition(pos, ctrlHeld);
 
-	if (event->button() == Qt::LeftButton)
+	if (event->button() == Qt::LeftButton && m_InteractionState == InteractionState::None)
 	{
 		m_MouseLeftPressPosition = pos;
 		m_MouseLeftPressTimeValue = timeValueAtXY(pos);
@@ -372,6 +382,16 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 		}
 	}
 
+	if (event->button() == Qt::MiddleButton && m_InteractionState == InteractionState::None)
+	{
+		m_MouseMiddlePressPosition = pos;
+		m_MouseMiddlePressTimeValue = timeValueAtXY(pos);
+		m_BackupVerticalCenterValue = m_VerticalCenterValue;
+		m_BackupFromTime = m_FromTime;
+		m_BackupToTime = m_ToTime;
+		m_InteractionState = InteractionState::Pan;
+	}
+
 	if (event->button() == Qt::RightButton)
 	{
 		m_MouseRightPressPosition = pos;
@@ -459,6 +479,13 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 			m_InteractionState = InteractionState::None;
 			break;
 		}
+		case InteractionState::Pan: {
+			m_VerticalCenterValue = m_BackupVerticalCenterValue;
+			m_FromTime = m_BackupFromTime;
+			m_ToTime = m_BackupToTime;
+			m_SkipContextMenu = true;
+			m_InteractionState = InteractionState::None;
+		}
 		default: {
 			m_ActiveKeyframe = m_HoverKeyframe;
 			m_ActiveTrack = m_HoverTrack;
@@ -500,6 +527,16 @@ void AnimationCurveEditor::mouseReleaseEvent(QMouseEvent *event)
 		m_MouseLeftPressTimeValue = QPointF();
 		m_ActiveKeyframe = -1;
 		m_ActiveTrack = nullptr;
+	}
+
+	if (event->button() == Qt::MiddleButton)
+	{
+		if (m_InteractionState == InteractionState::Pan)
+		{
+			m_InteractionState = InteractionState::None;
+			m_MouseMiddlePressPosition = QPoint();
+			m_MouseMiddlePressTimeValue = QPointF();
+		}
 	}
 
 	if (event->button() == Qt::RightButton)
@@ -580,6 +617,10 @@ void AnimationCurveEditor::wheelEvent(QWheelEvent *event)
 		if (!m_MouseRightPressPosition.isNull() || !m_MouseRightPressTimeValue.isNull())
 		{
 			m_MouseRightPressPosition = keyframePoint(m_MouseRightPressTimeValue.x(), m_MouseRightPressTimeValue.y());
+		}
+		if (!m_MouseMiddlePressPosition.isNull() || !m_MouseMiddlePressTimeValue.isNull())
+		{
+			m_MouseMiddlePressPosition = keyframePoint(m_MouseMiddlePressTimeValue.x(), m_MouseMiddlePressTimeValue.y());
 		}
 		updateMousePosition(event->position().toPoint(), event->modifiers() & Qt::ControlModifier);
 	}

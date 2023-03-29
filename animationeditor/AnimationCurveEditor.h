@@ -103,7 +103,8 @@ private:
 		MoveLeftHandleOnly,
 		SelectMoveRightHandle,
 		MoveRightHandleOnly,
-		MultiSelect
+		MultiSelect,
+		Pan,
 	};
 
 	// Utility functions for working with keyframes and control points
@@ -157,6 +158,8 @@ private:
 	AnimationTrack *m_HoverTrack = nullptr;
 	QPoint m_MouseLeftPressPosition;
 	QPointF m_MouseLeftPressTimeValue;
+	QPoint m_MouseMiddlePressPosition;
+	QPointF m_MouseMiddlePressTimeValue;
 	QPoint m_MouseRightPressPosition;
 	QPointF m_MouseRightPressTimeValue;
 	QPoint m_MouseMovePosition;
@@ -180,6 +183,9 @@ private:
 	double m_VerticalPixelPerValue = 400.0 / 10.0;
 	double m_FromTime = 0.0;
 	double m_ToTime = 10.0;
+	double m_BackupVerticalCenterValue = 0;
+	double m_BackupFromTime = 0;
+	double m_BackupToTime = 0;
 };
 
 #endif /* ANIMATION_CURVE_EDITOR__H */
