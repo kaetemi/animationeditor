@@ -1114,7 +1114,7 @@ void AnimationCurveEditor::paintInterpolationHandle(QPainter &painter, const QRe
 	}
 	else
 	{
-		baseColor = lerp(palette().color(QPalette::Button), palette().color(QPalette::ButtonText), 0.3);
+		baseColor = lerp(palette().color(QPalette::Button), palette().color(QPalette::ButtonText), 0.6);
 		lightColor = baseColor.lighter(110);
 		darkColor = baseColor.darker(110);
 	}
