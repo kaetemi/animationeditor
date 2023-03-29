@@ -1,6 +1,6 @@
 # AnimationEditor Widget
 
-The AnimationEditor is a QWidget for Qt, which allows developers to create, edit, and manage animations in a user-friendly interface. It is designed for use in various applications, such as game development, multimedia applications, and animation tools.
+The AnimationEditor is a QWidget for Qt, which allows developers to create, edit, and manage animation curves in a user-friendly interface. It is designed for use in various applications, such as game development, multimedia applications, and animation tools.
 
 ![Animation Editor](https://raw.githubusercontent.com/kaetemi/animationeditor/master/doc/screenshot.png "Screenshot")
 
