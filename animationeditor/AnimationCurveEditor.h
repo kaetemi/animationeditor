@@ -121,7 +121,7 @@ private:
 	void paintKeyframe(QPainter &painter, const QRect &rect, bool selected, bool hover, bool active);
 
 	// Mouse interaction helper functions
-	void updateMousePosition(const QPoint &pos);
+	void updateMousePosition(const QPoint &pos, bool ctrlHeld);
 	void updateMouseSelection(bool ctrlHeld);
 
 private:
@@ -145,8 +145,8 @@ private:
 	QPoint m_MouseLeftPressPosition;
 	QPoint m_MouseRightPressPosition;
 	QPoint m_MouseMovePosition;
-	QPoint m_MouseReleasePosition;
 	bool m_SkipContextMenu = false;
+	bool m_SelectMoveTresholdPassed = false;
 
 	// Context menu actions
 	QMenu *m_ContextMenu = nullptr;

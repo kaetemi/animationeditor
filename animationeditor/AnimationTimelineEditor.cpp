@@ -39,7 +39,6 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QStyleOption>
 #include <QTreeWidget>
 #include <QPainterPath>
-#include <QGraphicsDropShadowEffect>
 #include <QMenu>
 #include <QAction>
 #include <QScrollBar>

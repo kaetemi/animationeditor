@@ -38,6 +38,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 #include <QApplication>
 #include <QMenu>
 #include <QAction>
+#include <QStyleOption>
 
 #include "AnimationTimelineEditor.h" // AnimationContextMenu
 
@@ -98,7 +99,7 @@ QSet<ptrdiff_t> AnimationCurveEditor::keyframeSelection() const
 	return m_SelectedKeyframes;
 }
 
-void AnimationCurveEditor::updateMousePosition(const QPoint &pos)
+void AnimationCurveEditor::updateMousePosition(const QPoint &pos, bool ctrlHeld)
 {
 	m_MouseMovePosition = pos;
 	AnimationTrack *track = nullptr;
@@ -111,8 +112,48 @@ void AnimationCurveEditor::updateMousePosition(const QPoint &pos)
 	}
 	else if (m_InteractionState != InteractionState::None)
 	{
-		// TODO: Update move, etc.
+		if (m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::SelectMove)
+		{
+
+			if (m_InteractionState == InteractionState::SelectMove && !m_SelectMoveTresholdPassed)
+			{
+				int dx = pos.x() - m_MouseLeftPressPosition.x();
+				int dy = pos.y() - m_MouseLeftPressPosition.y();
+				if ((dx * dx) + (dy * dy) > 9)
+				{
+					m_SelectMoveTresholdPassed = true;
+				}
+			}
+
+			if (m_InteractionState == InteractionState::MoveOnly || m_SelectMoveTresholdPassed)
+			{
+				// Calculate the delta movement in time and value
+				double timeDelta = timeAtX(pos.x()) - timeAtX(m_MouseLeftPressPosition.x());
+				double valueDelta = (pos.y() - m_MouseLeftPressPosition.y()) / m_VerticalPixelPerValue;
+
+				// Move the selected keyframes relative to the backup position
+				// TODO
+			}
+		}
+		else if (m_InteractionState == InteractionState::MultiSelect)
+		{
+			// Update the selection rectangle
+			updateMouseSelection(ctrlHeld);
+		}
+
 		update();
+	}
+}
+
+void AnimationCurveEditor::updateMouseSelection(bool ctrlHeld)
+{
+	QRect rect;
+	rect.setTopLeft(m_MouseLeftPressPosition);
+	rect.setBottomRight(m_MouseMovePosition);
+	m_SelectedKeyframes = keyframesInRect(rect.normalized());
+	if (ctrlHeld)
+	{
+		m_SelectedKeyframes.unite(m_BackupSelectedKeyframes);
 	}
 }
 
@@ -120,7 +161,8 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 {
 	m_SkipContextMenu = false;
 	QPoint pos = event->pos();
-	updateMousePosition(pos);
+	bool ctrlHeld = event->modifiers() & Qt::ControlModifier;
+	updateMousePosition(pos, ctrlHeld);
 
 	if (event->button() == Qt::LeftButton)
 	{
@@ -137,8 +179,13 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 			else
 			{
 				m_BackupSelectedKeyframes = m_SelectedKeyframes;
+				if (!ctrlHeld)
+				{
+					m_SelectedKeyframes.clear();
+				}
 				m_SelectedKeyframes.insert(keyframe);
 				m_InteractionState = InteractionState::SelectMove;
+				m_SelectMoveTresholdPassed = false;
 			}
 		}
 		else
@@ -146,6 +193,7 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 			m_BackupSelectedKeyframes = m_SelectedKeyframes;
 			m_SelectedKeyframes.clear();
 			m_InteractionState = InteractionState::MultiSelect;
+			updateMouseSelection(ctrlHeld);
 		}
 	}
 
@@ -158,19 +206,29 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 		case InteractionState::MoveOnly: {
 			// TODO: Implement abort move
 			m_SkipContextMenu = true;
+			m_InteractionState = InteractionState::None;
 			break;
 		}
 		case InteractionState::SelectMove: {
-			// TODO: Implement abort move
-			m_SelectedKeyframes = m_BackupSelectedKeyframes;
+			if (m_SelectMoveTresholdPassed)
+			{
+				// TODO: Implement abort move
+			}
+			else
+			{
+				// Only abort selection if we didn't move, the abort is just to abort the movement!
+				m_SelectedKeyframes = m_BackupSelectedKeyframes;
+			}
 			m_BackupSelectedKeyframes.clear();
 			m_SkipContextMenu = true;
+			m_InteractionState = InteractionState::None;
 			break;
 		}
 		case InteractionState::MultiSelect: {
 			m_SelectedKeyframes = m_BackupSelectedKeyframes;
 			m_BackupSelectedKeyframes.clear();
 			m_SkipContextMenu = true;
+			m_InteractionState = InteractionState::None;
 			break;
 		}
 		default: {
@@ -186,54 +244,39 @@ void AnimationCurveEditor::mousePressEvent(QMouseEvent *event)
 
 void AnimationCurveEditor::mouseMoveEvent(QMouseEvent *event)
 {
-	updateMousePosition(event->pos());
-	/*
-	if (m_InteractionState == InteractionState::SelectMove || m_InteractionState == InteractionState::MoveOnly)
-	{
-	    // TODO: Implement moving selected keyframes.
-	}
-	else if (m_InteractionState == InteractionState::MultiSelect)
-	{
-	    m_SelectionRect.setBottomRight(event->pos());
-	    updateMouseSelection(QApplication::keyboardModifiers() & Qt::ControlModifier);
-	}
-	*/
+	updateMousePosition(event->pos(), event->modifiers() & Qt::ControlModifier);
 }
 
 void AnimationCurveEditor::mouseReleaseEvent(QMouseEvent *event)
 {
-	updateMousePosition(event->pos());
+	QPoint pos = event->pos();
+	updateMousePosition(pos, event->modifiers() & Qt::ControlModifier);
 
-	/*
 	if (event->button() == Qt::LeftButton)
 	{
-	    if (m_InteractionState == InteractionState::SelectMove || m_InteractionState == InteractionState::MoveOnly)
-	    {
-	        // TODO: Apply keyframe movements.
-	    }
-	    else if (m_InteractionState == InteractionState::MultiSelect)
-	    {
-	        updateMouseSelection(QApplication::keyboardModifiers() & Qt::ControlModifier);
-	    }
-	    m_InteractionState = InteractionState::SelectOnly;
+		if (m_InteractionState == InteractionState::MoveOnly || m_InteractionState == InteractionState::SelectMove)
+		{
+			// TODO: Apply the move operation to selected keyframes
+		}
+		else if (m_InteractionState == InteractionState::MultiSelect)
+		{
+			// Finalize the multi-selection
+			m_BackupSelectedKeyframes.clear();
+		}
+
+		m_InteractionState = InteractionState::None;
+		m_MouseLeftPressPosition = QPoint();
+		m_ActiveKeyframe = -1;
+		m_ActiveTrack = nullptr;
 	}
-	else if (event->button() == Qt::RightButton)
-	{ // ...
-	    if (m_InteractionState == InteractionState::SelectMove || m_InteractionState == InteractionState::MoveOnly)
-	    {
-	        m_SelectedKeyframes = m_BackupSelection;
-	        // TODO: Revert keyframe movements.
-	    }
-	    else if (m_InteractionState == InteractionState::MultiSelect)
-	    {
-	        if (m_AbortContextMenu)
-	        {
-	            m_SelectedKeyframes = m_BackupSelection;
-	        }
-	    }
-	    m_InteractionState = InteractionState::SelectOnly;
+
+	if (event->button() == Qt::RightButton)
+	{
+		m_InteractionState = InteractionState::None;
+		m_MouseRightPressPosition = QPoint();
+		m_ActiveKeyframe = -1;
+		m_ActiveTrack = nullptr;
 	}
-	*/
 
 	update();
 }
@@ -831,10 +874,20 @@ void AnimationCurveEditor::paintEvent(QPaintEvent *event)
 			QPoint point = keyframePoint(it.key(), it.value().Value);
 			bool isSelected = m_SelectedKeyframes.contains(it.value().Id);
 			bool isHovered = m_HoverKeyframe == it.value().Id;
-			bool isPressed = m_ActiveKeyframe == it.value().Id;
+			bool isPressed = (m_ActiveKeyframe == it.value().Id) && isHovered;
 			QRect keyframeRect = QRect(point.x() - 6, point.y() - 6, 12, 12);
 			paintKeyframe(painter, keyframeRect, isSelected, isHovered, isPressed);
 		}
+	}
+
+	// Paint selection
+	if (m_InteractionState == InteractionState::MultiSelect)
+	{
+		QRect selectionRect = QRect(m_MouseLeftPressPosition, m_MouseMovePosition).normalized();
+		QStyleOptionRubberBand rubberBandOption;
+		rubberBandOption.initFrom(this);
+		rubberBandOption.rect = selectionRect;
+		style()->drawControl(QStyle::CE_RubberBand, &rubberBandOption, &painter, this);
 	}
 }
 
@@ -878,6 +931,7 @@ bool AnimationCurveEditor::eventFilter(QObject *watched, QEvent *event)
 			if (keyEvent->key() == Qt::Key_Control)
 			{
 				updateMouseSelection(true);
+				update();
 			}
 		}
 		else if (event->type() == QEvent::KeyRelease)
@@ -886,15 +940,11 @@ bool AnimationCurveEditor::eventFilter(QObject *watched, QEvent *event)
 			if (keyEvent->key() == Qt::Key_Control)
 			{
 				updateMouseSelection(false);
+				update();
 			}
 		}
 	}
 	return QWidget::eventFilter(watched, event);
-}
-
-void AnimationCurveEditor::updateMouseSelection(bool ctrlHeld)
-{
-	// Implement updating the mouse selection
 }
 
 /* end of file */
