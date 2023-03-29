@@ -92,10 +92,13 @@ private:
 
 	// Utility functions for working with keyframes and control points
 	QRect gridRect() const;
+	QPointF keyframePointF(double time, double value) const;
 	QPoint keyframePoint(double time, double value) const;
+	double timeAtX(double x) const;
 	double timeAtX(int x) const;
-	AnimationTrack *trackAtPosition(const QPoint &pos) const;
-	AnimationKeyframe keyframeAtPosition(const AnimationTrack *track, const QPoint &pos) const;
+	ptrdiff_t keyframeAtPosition(const QPoint &pos) const;
+	QSet<ptrdiff_t> keyframesAtPosition(const QPoint &pos) const;
+	QSet<ptrdiff_t> keyframesInRect(const QPoint &pos) const;
 	void recalculateGridInverval();
 
 	// Paint and layout helper functions

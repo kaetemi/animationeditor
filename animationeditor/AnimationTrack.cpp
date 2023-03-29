@@ -336,6 +336,8 @@ double AnimationTrack::valueAtTime(KeyframeMap::const_iterator key0, KeyframeMap
 			return interpolateEaseInOut(key0.key(), key0.value(), key1.key(), key1.value(), time);
 		}
 	}
+
+	return 0.0;
 }
 
 double AnimationTrack::interpolateBezier(double t0, const AnimationKeyframe &k0, double t1, const AnimationKeyframe &k1, double t)

@@ -150,6 +150,22 @@ QRect AnimationCurveEditor::gridRect() const
 	return rect;
 }
 
+QPointF AnimationCurveEditor::keyframePointF(double time, double value) const
+{
+	// Get the grid rectangle
+	QRect grid = gridRect();
+
+	// Calculate the horizontal position (x) within the grid rectangle
+	double normalizedTime = (time - m_FromTime) / (m_ToTime - m_FromTime);
+	double x = grid.left() + normalizedTime * grid.width();
+
+	// Calculate the vertical position (y) within the grid rectangle
+	double normalizedValue = (value - m_VerticalCenterValue) * m_VerticalPixelPerValue;
+	double y = grid.center().y() - normalizedValue;
+
+	return QPointF(x, y);
+}
+
 QPoint AnimationCurveEditor::keyframePoint(double time, double value) const
 {
 	// Get the grid rectangle
@@ -166,6 +182,14 @@ QPoint AnimationCurveEditor::keyframePoint(double time, double value) const
 	return QPoint(round(x), round(y));
 }
 
+double AnimationCurveEditor::timeAtX(double x) const
+{
+	QRect grid = gridRect();
+	double xNormalized = (x - grid.left()) / static_cast<double>(grid.width());
+	double time = m_FromTime + xNormalized * (m_ToTime - m_FromTime);
+	return time;
+}
+
 double AnimationCurveEditor::timeAtX(int x) const
 {
 	QRect grid = gridRect();
@@ -174,16 +198,65 @@ double AnimationCurveEditor::timeAtX(int x) const
 	return time;
 }
 
-AnimationTrack *AnimationCurveEditor::trackAtPosition(const QPoint &pos) const
+ptrdiff_t AnimationCurveEditor::keyframeAtPosition(const QPoint &pos) const
 {
-	// Implement logic to find the AnimationTrack at the given position
-	return nullptr;
+	int keyframeHalfSize = 6;
+	for (AnimationTrack *track : m_AnimationTracks)
+	{
+		const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
+		if (keyframes.begin() != keyframes.end())
+		{
+			// Check if the pos time is between the first and last keyframe
+			double firstTime = keyframes.begin().key();
+			double lastTime = (keyframes.end() - 1).key();
+			if (timeAtX(pos.x()) >= firstTime && timeAtX(pos.x()) <= lastTime)
+			{
+				// Find the keyframe at the given position
+				for (auto it = keyframes.begin(); it != keyframes.end(); ++it)
+				{
+					QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
+					if (abs(keyframePos.x() - pos.x()) <= keyframeHalfSize && abs(keyframePos.y() - pos.y()) <= keyframeHalfSize)
+					{
+						return it.value().Id;
+					}
+				}
+			}
+		}
+	}
+	return -1;
 }
-
-AnimationKeyframe AnimationCurveEditor::keyframeAtPosition(const AnimationTrack *track, const QPoint &pos) const
+QSet<ptrdiff_t> AnimationCurveEditor::keyframesAtPosition(const QPoint &pos) const
 {
-	// Implement logic to find the AnimationKeyframe at the given position
-	return AnimationKeyframe();
+	int keyframeHalfSize = 6;
+	QSet<ptrdiff_t> res;
+	for (AnimationTrack *track : m_AnimationTracks)
+	{
+		const AnimationTrack::KeyframeMap &keyframes = track->keyframes();
+		if (keyframes.begin() != keyframes.end())
+		{
+			// Check if the pos time is between the first and last keyframe
+			double firstTime = keyframes.begin().key();
+			double lastTime = (keyframes.end() - 1).key();
+			if (timeAtX(pos.x()) >= firstTime && timeAtX(pos.x()) <= lastTime)
+			{
+				// Find the keyframe at the given position
+				for (auto it = keyframes.begin(); it != keyframes.end(); ++it)
+				{
+					QPoint keyframePos = keyframePoint(it.key(), it.value().Value);
+					if (abs(keyframePos.x() - pos.x()) <= keyframeHalfSize && abs(keyframePos.y() - pos.y()) <= keyframeHalfSize)
+					{
+						res.insert(it.value().Id);
+					}
+				}
+			}
+		}
+	}
+	return res;
+}
+QSet<ptrdiff_t> AnimationCurveEditor::keyframesInRect(const QPoint &pos) const
+{
+	QSet<ptrdiff_t> res;
+	return res;
 }
 
 void AnimationCurveEditor::recalculateGridInverval()
@@ -483,12 +556,20 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 	curvePen.setWidthF(1.5);
 	painter.setPen(curvePen);
 
+	const double pxStep = 2;
+	const double fromX = keyframePointF(m_FromTime, 0).x(); // TODO: Adjust to 0 time aligned with framerate or pxStep
+	const double toX = keyframePointF(m_ToTime, 0).x(); // TODO: Adjust to 0 time aligned with framerate or pxStep
+
 	const QMap<double, AnimationKeyframe> &keyframes = track->keyframes();
 	QMap<double, AnimationKeyframe>::const_iterator it = keyframes.begin();
 
 	// Check if the track has at least two keyframes
+	QPainterPath path;
 	if (it != keyframes.end() && (it + 1) != keyframes.end())
 	{
+		QPointF lastPoint = keyframePointF(it.key(), it.value().Value);
+		path.moveTo(lastPoint);
+
 		bool withinTimeRange = false;
 
 		for (; (it + 1) != keyframes.end(); ++it)
@@ -496,7 +577,7 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 			double time1 = it.key();
 			double time2 = (it + 1).key();
 
-			if (!withinTimeRange && time2 >= m_FromTime)
+			if (!withinTimeRange && keyframePointF(time2, 0).x() >= fromX)
 			{
 				// We are now within the time range
 				withinTimeRange = true;
@@ -504,16 +585,40 @@ void AnimationCurveEditor::paintCurve(QPainter &painter, AnimationTrack *track, 
 
 			if (withinTimeRange)
 			{
-				// If time1 is beyond the m_ToTime, we can exit the loop early
-				if (time1 > m_ToTime)
-					break;
+				if (track->interpolationMethod() == AnimationInterpolation::Linear)
+				{
+					// If time1 is beyond the m_ToTime, we can exit the loop early
+					if (time1 > m_ToTime)
+						break;
 
-				QPoint point1 = keyframePoint(time1, it.value().Value);
-				QPoint point2 = keyframePoint(time2, (it + 1).value().Value);
-				painter.drawLine(point1, point2);
+					QPointF nextPoint = keyframePointF(time2, (it + 1).value().Value);
+					path.lineTo(nextPoint);
+					lastPoint = nextPoint;
+				}
+				else
+				{
+					double x = lastPoint.x();
+					x += pxStep;
+					double timeX = timeAtX(x);
+					while (timeX <= time2)
+					{
+						// If lastPoint is beyond the toX, we can exit the loop early
+						if (lastPoint.x() > toX)
+							break;
+
+						QPointF nextPoint = keyframePointF(timeX, track->valueAtTime(it, it + 1, timeX));
+						path.lineTo(nextPoint);
+						lastPoint = nextPoint;
+						x += pxStep;
+						timeX = timeAtX(x);
+					}
+					if (lastPoint.x() > toX)
+						break;
+				}
 			}
 		}
 	}
+	painter.drawPath(path);
 }
 
 
