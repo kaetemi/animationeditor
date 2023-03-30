@@ -37,7 +37,7 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include <QWidget>
 
-class ANIMATIONEDITOR_EXPORT AnimationTimeScrubber : public QWidget
+class AnimationTimeScrubber : public QWidget
 {
 	Q_OBJECT
 
@@ -45,56 +45,66 @@ public:
 	explicit AnimationTimeScrubber(QWidget *parent = nullptr);
 	virtual ~AnimationTimeScrubber();
 
-	// Set the duration of the animation timeline
-	void setDuration(double from, double to);
-
-	// Set the frame rate of the animation
-	void setFrameRate(double frameRate);
-
-	// Get the frame rate of the animation.
-	int frameRate() const;
-
-	// Set the current time of the scrubber
+	// Set and get the current time
 	void setCurrentTime(double time);
-
-	// Get the current time of the scrubber
 	double currentTime() const;
 
+	// Set and get the active range
+	void setActiveRange(double fromTime, double toTime);
+	void activeRange(double &fromTime, double &toTime) const;
+
 signals:
-	// Signal emitted when the current time changes
 	void currentTimeChanged(double time);
+	void activeRangeChanged(double fromTime, double toTime);
 
 protected:
-	// Override the paint event to draw the time ruler and scrubber handle
+	// Override paintEvent to customize drawing
 	void paintEvent(QPaintEvent *event) override;
 
-	// Override the mouse events to handle scrubber interactions
+	// Additional event handlers for mouse interactions
 	void mousePressEvent(QMouseEvent *event) override;
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void mouseReleaseEvent(QMouseEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
 
 private:
-	// Convert the timeline duration to a pixel value
-	int timeToPixel(double time) const;
+	// Enum for user interaction state
+	enum class InteractionState
+	{
+		None = 0,
+		Scrubbing,
+		MovingActiveRange,
+		ResizingLeftActiveRange,
+		ResizingRightActiveRange,
+		Zooming,
+	};
 
-	// Convert a pixel value to the timeline duration
-	double pixelToTime(int pixel) const;
+	// Utility functions for working with time and range handles
+	int xAtTime(double time) const;
+	double timeAtX(int x) const;
 
-	// Helper method to calculate the width of the ruler
-	int rulerWidth() const;
+	// Paint and layout helper functions
+	QRect rulerRect() const;
+	QRect activeRangeRect() const;
+	QRect scrubberHandleRect() const;
+	QRect fromHandleRect() const;
+	QRect toHandleRect() const;
+	void paintRuler(QPainter &painter);
+	void paintActiveRange(QPainter &painter);
+	void paintScrubber(QPainter &painter);
 
-	// The duration range of the animation timeline
-	double m_FromTime;
-	double m_ToTime;
+	// Mouse interaction helper functions
+	void updateMouseInteraction(const QPoint &pos);
 
-	// The frame rate of the animation.
-	int m_FrameRate;
-
-	// The current time of the scrubber.
-	double m_CurrentTime;
-
-	// A flag indicating whether the user is currently dragging the scrubber
-	bool m_IsDragging;
+private:
+	double m_CurrentTime = 2;
+	double m_FromTime = 0;
+	double m_ToTime = 10;
+	InteractionState m_InteractionState;
+	QPoint m_MouseLeftPressPosition;
+	double m_MouseLeftPressTime = 0;
+	bool m_ScrubberActive = false;
+	bool m_ScrubberHovered = false;
 
 }; /* class AnimationEditor */
 

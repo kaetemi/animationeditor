@@ -41,42 +41,30 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 AnimationTimeScrubber::AnimationTimeScrubber(QWidget *parent)
     : QWidget(parent)
-    , m_FromTime(0.0)
-	, m_ToTime(10.0)
-	, m_FrameRate(30)
-    , m_CurrentTime(2.5)
-    , m_IsDragging(false)
+    , m_CurrentTime(0)
+// m_StartTime(0),
+// m_EndTime(10),
+// m_PlaybackLoopStart(0),
+// m_PlaybackLoopEnd(10),
+// m_ZoomLevel(1),
+// m_IsScrubberPressed(false)
 {
-	setMinimumHeight(50);
-	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	setMouseTracking(true);
+	setFixedHeight(40);
 }
 
 AnimationTimeScrubber::~AnimationTimeScrubber()
 {
 }
 
-void AnimationTimeScrubber::setDuration(double from, double to)
-{
-	m_FromTime = from;
-	m_ToTime = to;
-	update();
-}
-
-void AnimationTimeScrubber::setFrameRate(double frameRate)
-{
-	m_FrameRate = frameRate;
-	update();
-}
-
-int AnimationTimeScrubber::frameRate() const
-{
-	return m_FrameRate;
-}
-
 void AnimationTimeScrubber::setCurrentTime(double time)
 {
-	m_CurrentTime = qBound(m_FromTime, time, m_ToTime);
-	update();
+	if (m_CurrentTime != time)
+	{
+		m_CurrentTime = time;
+		update();
+		emit currentTimeChanged(time);
+	}
 }
 
 double AnimationTimeScrubber::currentTime() const
@@ -84,111 +72,273 @@ double AnimationTimeScrubber::currentTime() const
 	return m_CurrentTime;
 }
 
-int AnimationTimeScrubber::timeToPixel(double time) const
+void AnimationTimeScrubber::setActiveRange(double fromTime, double toTime)
 {
-	double timeRange = m_ToTime - m_FromTime;
-	double pixelsPerSecond = static_cast<double>(width()) / timeRange;
-	return static_cast<int>((time - m_FromTime) * pixelsPerSecond);
+	if (m_FromTime != fromTime || m_ToTime != toTime)
+	{
+		m_FromTime = fromTime;
+		m_ToTime = toTime;
+		update();
+		emit activeRangeChanged(fromTime, toTime);
+	}
 }
 
-double AnimationTimeScrubber::pixelToTime(int pixel) const
+void AnimationTimeScrubber::activeRange(double &fromTime, double &toTime) const
 {
-	double timeRange = m_ToTime - m_FromTime;
-	double secondsPerPixel = timeRange / static_cast<double>(width());
-	return m_FromTime + pixel * secondsPerPixel;
+	fromTime = m_FromTime;
+	toTime = m_ToTime;
 }
 
-int AnimationTimeScrubber::rulerWidth() const
+QRect AnimationTimeScrubber::rulerRect() const
 {
-	return width() - 2; // 1 pixel margin on each side
+	return QRect(1, 1, width() - 2, height() - 2);
+}
+
+int AnimationTimeScrubber::xAtTime(double time) const
+{
+	QRect ruler = rulerRect();
+	double pixelPerSecond = static_cast<double>(ruler.width()) / (m_ToTime - m_FromTime);
+	int x = ruler.left() + static_cast<int>((time - m_FromTime) * pixelPerSecond);
+	return qBound(ruler.left(), x, ruler.right());
+}
+
+double AnimationTimeScrubber::timeAtX(int x) const
+{
+	QRect ruler = rulerRect();
+	double pixelPerSecond = static_cast<double>(ruler.width()) / (m_ToTime - m_FromTime);
+	double time = m_FromTime + static_cast<double>(x - ruler.left()) / pixelPerSecond;
+	return qBound(m_FromTime, time, m_ToTime);
+}
+
+void AnimationTimeScrubber::updateMouseInteraction(const QPoint &pos)
+{
+	QRect activeRange = activeRangeRect();
+	QRect scrubberHandle = scrubberHandleRect();
+	QRect fromHandle = fromHandleRect();
+	QRect toHandle = toHandleRect();
+
+	if (m_InteractionState == InteractionState::None)
+	{
+		if (scrubberHandle.contains(pos))
+		{
+			setCursor(Qt::SizeHorCursor);
+			// m_IsScrubberHovered = true;
+		}
+		else
+		{
+			setCursor(Qt::ArrowCursor);
+			// m_IsScrubberHovered = false;
+		}
+	}
+	else if (m_InteractionState == InteractionState::Scrubbing)
+	{
+		double newTime = timeAtX(pos.x());
+		setCurrentTime(newTime);
+	}
+	else if (m_InteractionState == InteractionState::MovingActiveRange)
+	{
+		// double timeOffset = timeAtX(pos.x()) - m_MouseLeftPressTime;
+		// double newFromTime = m_MouseLeftPressFromTime + timeOffset;
+		// double newToTime = m_MouseLeftPressToTime + timeOffset;
+		// setActiveRange(newFromTime, newToTime);
+	}
+	else if (m_InteractionState == InteractionState::ResizingLeftActiveRange)
+	{
+		double newFromTime = timeAtX(pos.x());
+		setActiveRange(newFromTime, m_ToTime);
+	}
+	else if (m_InteractionState == InteractionState::ResizingRightActiveRange)
+	{
+		double newToTime = timeAtX(pos.x());
+		setActiveRange(m_FromTime, newToTime);
+	}
+	else if (m_InteractionState == InteractionState::Zooming)
+	{
+		// Implement zooming functionality
+	}
 }
 
 void AnimationTimeScrubber::mousePressEvent(QMouseEvent *event)
 {
-	if (event->button() == Qt::LeftButton)
-	{
-		int scrubberHandlePosition = timeToPixel(m_CurrentTime);
-		int clickPosition = event->pos().x();
+	updateMouseInteraction(event->pos());
 
-		// Check if the click is within a threshold of the scrubber handle position
-		if (abs(clickPosition - scrubberHandlePosition) <= 5) // 5 pixels as an example threshold
-		{
-			m_IsDragging = true;
-			event->accept();
-		}
+	if (m_InteractionState == InteractionState::Scrubbing)
+	{
+		m_ScrubberActive = true;
 	}
+	else
+	{
+		m_ScrubberActive = false;
+	}
+
+	m_MouseLeftPressPosition = event->pos();
+	m_MouseLeftPressTime = m_CurrentTime;
+
+	update();
 }
 
 void AnimationTimeScrubber::mouseMoveEvent(QMouseEvent *event)
 {
-	if (m_IsDragging)
-	{
-		double newTime = pixelToTime(event->pos().x());
-		setCurrentTime(newTime);
-		emit currentTimeChanged(newTime);
-		event->accept();
-	}
+	updateMouseInteraction(event->pos());
+	update();
 }
 
 void AnimationTimeScrubber::mouseReleaseEvent(QMouseEvent *event)
 {
-	if (event->button() == Qt::LeftButton && m_IsDragging)
+	m_ScrubberActive = false;
+	updateMouseInteraction(event->pos());
+	update();
+}
+
+void AnimationTimeScrubber::wheelEvent(QWheelEvent *event)
+{
+	int delta = event->angleDelta().y();
+	if (event->modifiers() & Qt::ControlModifier)
 	{
-		m_IsDragging = false;
-		event->accept();
+		// Implement zooming functionality here
+	}
+	else
+	{
+		// Implement scrolling functionality here, if desired
 	}
 }
+
 
 void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event);
-
 	QPainter painter(this);
 
-	// Get the colors from the widget's palette.
-	QColor bgColor = palette().color(QPalette::Base);
-	QColor rulerColor = palette().color(QPalette::Window);
-	QColor tickColor = palette().color(QPalette::WindowText);
-	QColor scrubberColor = palette().color(QPalette::Highlight);
+	// Draw the timeline ruler
+	paintRuler(painter);
 
-	// Draw the background
-	painter.fillRect(rect(), bgColor);
+	// Draw the active range
+	paintActiveRange(painter);
 
-	// Draw the ruler.
-	const int rulerTopMargin = 10;
-	const int rulerHeight = height() - rulerTopMargin;
-	const int rulerWidth = this->rulerWidth();
+	// Draw the scrubber
+	paintScrubber(painter);
 
-	painter.fillRect(0, rulerTopMargin, rulerWidth, rulerHeight, rulerColor);
+	/*
+	QPainter painter(this);
+	painter.setRenderHint(QPainter::Antialiasing, true);
 
-	// Draw tick marks for each second.
-	const int tickHeight = 10;
-	const int frameTickHeight = 5;
+	paintBackground(painter);
+	paintTimeRuler(painter);
+	paintLoopRange(painter);
 
-	for (double time = m_FromTime; time <= m_ToTime; time += 1.0)
+	QRect scrubberRect = scrubberHandleRect();
+
+	QStyleOptionSlider option;
+	option.initFrom(this);
+	option.minimum = 0;
+	option.maximum = 1;
+	option.sliderPosition = 0;
+	option.subControls = QStyle::SC_SliderHandle;
+	option.activeSubControls = QStyle::SC_SliderHandle;
+	option.rect = scrubberRect;
+	option.orientation = Qt::Horizontal;
+
+	// Change the style state depending on user interaction
+	if (m_IsScrubberPressed)
 	{
-		int x = timeToPixel(time);
-
-		if (fmod(time, 1.0) == 0.0)
-		{
-			// Draw a long tick mark for every second.
-			painter.fillRect(x, rulerTopMargin, 1, tickHeight * 2, tickColor);
-		}
-		else if (m_FrameRate > 0 && fmod(time * m_FrameRate, 1.0) == 0.0)
-		{
-			// Draw a short tick mark for every frame.
-			painter.fillRect(x, rulerTopMargin, 1, frameTickHeight, tickColor);
-		}
-		else
-		{
-			// Draw a short tick mark for every second.
-			painter.fillRect(x, rulerTopMargin, 1, tickHeight, tickColor);
-		}
+	    option.state |= QStyle::State_Sunken;
+	}
+	else if (scrubberRect.contains(mapFromGlobal(QCursor::pos())))
+	{
+	    option.state |= QStyle::State_MouseOver;
 	}
 
-	// Draw the scrubber handle.
+	// Get the handle style from the widget style and draw it.
+	const QStyle* style = QApplication::style();
+	style->drawComplexControl(QStyle::CC_Slider, &option, &painter, this);
+	*/
+}
+
+static QColor lerp(const QColor &color1, const QColor &color2, qreal t)
+{
+	float r1, g1, b1, a1;
+	float r2, g2, b2, a2;
+
+	color1.getRgbF(&r1, &g1, &b1, &a1);
+	color2.getRgbF(&r2, &g2, &b2, &a2);
+
+	float r = r1 + (r2 - r1) * t;
+	float g = g1 + (g2 - g1) * t;
+	float b = b1 + (b2 - b1) * t;
+	float a = a1 + (a2 - a1) * t;
+
+	return QColor::fromRgbF(r, g, b, a);
+}
+
+void AnimationTimeScrubber::paintRuler(QPainter &painter)
+{
+	// Paint background
+	QRect rulerRect(0, 0, width(), height());
+	QBrush baseBrush = palette().brush(QPalette::Base);
+	painter.fillRect(rulerRect, baseBrush);
+
+	// Draw frame using QStyle
+	QStyleOptionFrame frameOption;
+	frameOption.initFrom(this);
+	frameOption.rect = rulerRect;
+	frameOption.frameShape = QFrame::NoFrame;
+	frameOption.lineWidth = 0;
+	frameOption.midLineWidth = 0;
+	frameOption.state |= QStyle::State_Sunken;
+	frameOption.features = QStyleOptionFrame::Flat;
+	style()->drawControl(QStyle::CE_ShapedFrame, &frameOption, &painter, this);
+
+	// Draw ruler ticks and labels
+	QColor baseColor = palette().color(QPalette::Base);
+	QPen lightPen = QPen(baseColor.lighter(200));
+	QPen basePen = QPen(lerp(palette().color(QPalette::Button), palette().color(QPalette::ButtonText), 0.2));
+	QPen darkPen = QPen(baseColor.darker(200));
+
+	int primaryLength = 12;
+	int secondaryLength = 6;
+	double pixelPerTime = static_cast<double>(width()) / (m_ToTime - m_FromTime);
+
+	// Draw primary time ticks and labels
+	for (double time = m_FromTime; time <= m_ToTime; ++time)
+	{
+		int x = xAtTime(time);
+		painter.setPen(darkPen);
+		painter.drawLine(x, height() - primaryLength, x, height());
+		painter.setPen(lightPen);
+		painter.drawLine(x, 0, x, height() - primaryLength);
+
+		QRect labelRect(x - 24, 0, 48, height() - primaryLength);
+		painter.setPen(basePen);
+		painter.drawText(labelRect, Qt::AlignHCenter | Qt::AlignTop, QString::number(time, 'f', 2));
+
+		// Draw secondary time ticks
+		for (double secondaryTime = time + 1.0 / pixelPerTime; secondaryTime <= (time + 1.0 - 1.0 / pixelPerTime); secondaryTime += 1.0 / pixelPerTime)
+		{
+			int secondaryX = xAtTime(secondaryTime);
+			painter.setPen(darkPen);
+			painter.drawLine(secondaryX, height() - secondaryLength, secondaryX, height());
+			painter.setPen(lightPen);
+			painter.drawLine(secondaryX, 0, secondaryX, height() - secondaryLength);
+		}
+	}
+}
+
+void AnimationTimeScrubber::paintActiveRange(QPainter &painter)
+{
+	QRect rangeRect = activeRangeRect();
+	QColor rangeColor = palette().color(QPalette::Highlight);
+	rangeColor.setAlpha(128);
+	QBrush rangeBrush(rangeColor);
+
+	painter.setPen(Qt::NoPen);
+	painter.setBrush(rangeBrush);
+	painter.drawRect(rangeRect);
+}
+
+void AnimationTimeScrubber::paintScrubber(QPainter &painter)
+{
 	const int scrubberSize = 20;
-	int scrubberX = timeToPixel(m_CurrentTime) - scrubberSize / 2;
+	int scrubberX = xAtTime(m_CurrentTime) - scrubberSize / 2;
 	int scrubberY = height() - 20;
 	QRect scrubberRect(scrubberX, scrubberY, scrubberSize, scrubberSize);
 
@@ -202,16 +352,56 @@ void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 	option.rect = scrubberRect;
 	option.orientation = Qt::Horizontal;
 
-	// Get the handle style from the widget style and draw it.
-	const QStyle* style = QApplication::style();
-	style->drawComplexControl(QStyle::CC_Slider, &option, &painter, this);
+	if (m_ScrubberActive)
+	{
+		option.state |= QStyle::State_Sunken;
+	}
+	else if (m_ScrubberHovered)
+	{
+		option.state |= QStyle::State_MouseOver;
+	}
 
-	// Draw the current time and frame label.
-	QString currentTimeText = QString::number(m_CurrentTime, 'f', 2);
-	QString currentFrameText = QString::number(timeToPixel(m_CurrentTime), 'f', 0);
-	QRect textRect = QRect(scrubberRect.x() + scrubberSize / 2, scrubberY - 20, 100, 20);
-	painter.drawText(textRect, Qt::AlignLeft | Qt::AlignTop, currentTimeText + "s / " + currentFrameText + "f @ " + QString::number(m_FrameRate) + "fps");
+	// Get the handle style from the widget style and draw it.
+	const QStyle *style = QApplication::style();
+	style->drawComplexControl(QStyle::CC_Slider, &option, &painter, this);
 }
 
+QRect AnimationTimeScrubber::activeRangeRect() const
+{
+	int fromX = xAtTime(m_FromTime);
+	int toX = xAtTime(m_ToTime);
+	int rangeHeight = 10; // Define the height of the range indicator
+
+	return QRect(fromX, height() - rangeHeight, toX - fromX, rangeHeight);
+}
+
+QRect AnimationTimeScrubber::scrubberHandleRect() const
+{
+	const int scrubberSize = 20;
+	int scrubberX = xAtTime(m_CurrentTime) - scrubberSize / 2;
+	int scrubberY = height() - 20;
+
+	return QRect(scrubberX, scrubberY, scrubberSize, scrubberSize);
+}
+
+QRect AnimationTimeScrubber::fromHandleRect() const
+{
+	int handleWidth = 10;
+	int handleHeight = 20;
+	int fromX = xAtTime(m_FromTime) - handleWidth / 2;
+	int handleY = height() - handleHeight;
+
+	return QRect(fromX, handleY, handleWidth, handleHeight);
+}
+
+QRect AnimationTimeScrubber::toHandleRect() const
+{
+	int handleWidth = 10;
+	int handleHeight = 20;
+	int toX = xAtTime(m_ToTime) - handleWidth / 2;
+	int handleY = height() - handleHeight;
+
+	return QRect(toX, handleY, handleWidth, handleHeight);
+}
 
 /* end of file */
