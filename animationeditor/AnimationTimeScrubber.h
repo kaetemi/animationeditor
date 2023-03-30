@@ -37,12 +37,14 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include <QWidget>
 
+class QTreeWidget;
+
 class AnimationTimeScrubber : public QWidget
 {
 	Q_OBJECT
 
 public:
-	explicit AnimationTimeScrubber(QWidget *parent = nullptr);
+	explicit AnimationTimeScrubber(QWidget *parent, QTreeWidget *dimensionalReference);
 	virtual ~AnimationTimeScrubber();
 
 	// Set and get the current time
@@ -59,6 +61,7 @@ signals:
 
 protected:
 	// Override paintEvent to customize drawing
+	void resizeEvent(QResizeEvent *event) override;
 	void paintEvent(QPaintEvent *event) override;
 
 	// Additional event handlers for mouse interactions
@@ -84,11 +87,13 @@ private:
 	double timeAtX(int x) const;
 
 	// Paint and layout helper functions
+	void recalculateRulerInverval();
 	QRect rulerRect() const;
 	QRect activeRangeRect() const;
 	QRect scrubberHandleRect() const;
 	QRect fromHandleRect() const;
 	QRect toHandleRect() const;
+	void paintBackground(QPainter &painter);
 	void paintRuler(QPainter &painter);
 	void paintActiveRange(QPainter &painter);
 	void paintScrubber(QPainter &painter);
@@ -97,6 +102,9 @@ private:
 	void updateMouseInteraction(const QPoint &pos);
 
 private:
+	QTreeWidget *m_DimensionalReference = nullptr;
+	double m_HorizontalPrimaryTimeInterval = 1.0;
+	double m_HorizontalSecondaryTimeInterval = 0.1;
 	double m_CurrentTime = 2;
 	double m_FromTime = 0;
 	double m_ToTime = 10;

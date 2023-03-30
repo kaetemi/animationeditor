@@ -912,8 +912,8 @@ void AnimationCurveEditor::recalculateGridInverval()
 {
 	QRect grid = gridRect();
 
-	double targetPixelsPerPrimary = 100.0; // Target pixels per primary
-	double pixelsPerValue = m_VerticalPixelPerValue;
+	const const double targetPixelsPerPrimary = 100.0; // Target pixels per primary
+	const double pixelsPerValue = m_VerticalPixelPerValue;
 	double pixelsPerTime = grid.width() / (m_ToTime - m_FromTime);
 
 	double primaryValueInterval = targetPixelsPerPrimary / pixelsPerValue;
@@ -925,10 +925,10 @@ void AnimationCurveEditor::recalculateGridInverval()
 	m_VerticalPrimaryValueInterval = primaryValueInterval;
 	m_VerticalSecondaryValueInterval = primaryValueInterval * 0.1;
 
-	double pixelsPerSecond = pixelsPerTime;
-	double pixelsPerMinute = pixelsPerSecond * 60.0;
-	double pixelsPerHour = pixelsPerSecond * 3600.0;
-	double pixelsPerDay = pixelsPerSecond * 86400.0;
+	const double pixelsPerSecond = pixelsPerTime;
+	const double pixelsPerMinute = pixelsPerSecond * 60.0;
+	const double pixelsPerHour = pixelsPerSecond * 3600.0;
+	const double pixelsPerDay = pixelsPerSecond * 86400.0;
 
 	double timeMultiplier = 1.0;
 	if (abs(pixelsPerSecond - targetPixelsPerPrimary) > abs(pixelsPerMinute - targetPixelsPerPrimary))

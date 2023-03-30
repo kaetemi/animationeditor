@@ -38,19 +38,17 @@ This library contains code that was generated using ChatGPT and Copilot.
 
 #include <QStyle>
 #include <QStyleOptionSlider>
+#include <QTreeWidget>
 
-AnimationTimeScrubber::AnimationTimeScrubber(QWidget *parent)
+AnimationTimeScrubber::AnimationTimeScrubber(QWidget *parent, QTreeWidget *dimensionalReference)
     : QWidget(parent)
-    , m_CurrentTime(0)
-// m_StartTime(0),
-// m_EndTime(10),
-// m_PlaybackLoopStart(0),
-// m_PlaybackLoopEnd(10),
-// m_ZoomLevel(1),
-// m_IsScrubberPressed(false)
+    , m_DimensionalReference(dimensionalReference)
 {
 	setMouseTracking(true);
-	setFixedHeight(40);
+	// setFocusPolicy(Qt::StrongFocus);
+	// qApp->installEventFilter(this);
+	recalculateRulerInverval();
+	// createContextMenu();
 }
 
 AnimationTimeScrubber::~AnimationTimeScrubber()
@@ -91,7 +89,15 @@ void AnimationTimeScrubber::activeRange(double &fromTime, double &toTime) const
 
 QRect AnimationTimeScrubber::rulerRect() const
 {
-	return QRect(1, 1, width() - 2, height() - 2);
+	QRect rect = QRect(0, 0, width(), height());
+
+	if (m_DimensionalReference)
+	{
+		int outlineSize = m_DimensionalReference->frameWidth();
+		rect.adjust(outlineSize, outlineSize, -outlineSize, -outlineSize);
+	}
+
+	return rect;
 }
 
 int AnimationTimeScrubber::xAtTime(double time) const
@@ -203,55 +209,30 @@ void AnimationTimeScrubber::wheelEvent(QWheelEvent *event)
 	}
 }
 
+void AnimationTimeScrubber::resizeEvent(QResizeEvent *event)
+{
+	QWidget::resizeEvent(event);
+	recalculateRulerInverval();
+}
 
 void AnimationTimeScrubber::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event);
 	QPainter painter(this);
 
-	// Draw the timeline ruler
-	paintRuler(painter);
+	// Frame and plain background
+	paintBackground(painter);
+	QRect rect = rulerRect();
+	painter.setClipRect(rect);
 
 	// Draw the active range
 	paintActiveRange(painter);
 
+	// Draw the timeline ruler
+	paintRuler(painter);
+
 	// Draw the scrubber
 	paintScrubber(painter);
-
-	/*
-	QPainter painter(this);
-	painter.setRenderHint(QPainter::Antialiasing, true);
-
-	paintBackground(painter);
-	paintTimeRuler(painter);
-	paintLoopRange(painter);
-
-	QRect scrubberRect = scrubberHandleRect();
-
-	QStyleOptionSlider option;
-	option.initFrom(this);
-	option.minimum = 0;
-	option.maximum = 1;
-	option.sliderPosition = 0;
-	option.subControls = QStyle::SC_SliderHandle;
-	option.activeSubControls = QStyle::SC_SliderHandle;
-	option.rect = scrubberRect;
-	option.orientation = Qt::Horizontal;
-
-	// Change the style state depending on user interaction
-	if (m_IsScrubberPressed)
-	{
-	    option.state |= QStyle::State_Sunken;
-	}
-	else if (scrubberRect.contains(mapFromGlobal(QCursor::pos())))
-	{
-	    option.state |= QStyle::State_MouseOver;
-	}
-
-	// Get the handle style from the widget style and draw it.
-	const QStyle* style = QApplication::style();
-	style->drawComplexControl(QStyle::CC_Slider, &option, &painter, this);
-	*/
 }
 
 static QColor lerp(const QColor &color1, const QColor &color2, qreal t)
@@ -270,25 +251,29 @@ static QColor lerp(const QColor &color1, const QColor &color2, qreal t)
 	return QColor::fromRgbF(r, g, b, a);
 }
 
-void AnimationTimeScrubber::paintRuler(QPainter &painter)
+void AnimationTimeScrubber::paintBackground(QPainter &painter)
 {
 	// Paint background
-	QRect rulerRect(0, 0, width(), height());
+	QRect rect = rulerRect();
 	QBrush baseBrush = palette().brush(QPalette::Base);
-	painter.fillRect(rulerRect, baseBrush);
+	painter.fillRect(rect, baseBrush);
 
 	// Draw frame using QStyle
 	QStyleOptionFrame frameOption;
 	frameOption.initFrom(this);
-	frameOption.rect = rulerRect;
-	frameOption.frameShape = QFrame::NoFrame;
-	frameOption.lineWidth = 0;
-	frameOption.midLineWidth = 0;
+	frameOption.rect = QRect(0, 0, width(), height());
+	frameOption.frameShape = m_DimensionalReference->frameShape();
+	frameOption.lineWidth = m_DimensionalReference->frameWidth();
+	frameOption.midLineWidth = m_DimensionalReference->midLineWidth();
 	frameOption.state |= QStyle::State_Sunken;
 	frameOption.features = QStyleOptionFrame::Flat;
 	style()->drawControl(QStyle::CE_ShapedFrame, &frameOption, &painter, this);
+}
 
+void AnimationTimeScrubber::paintRuler(QPainter &painter)
+{
 	// Draw ruler ticks and labels
+	QRect rect = rulerRect();
 	QColor baseColor = palette().color(QPalette::Base);
 	QPen lightPen = QPen(baseColor.lighter(200));
 	QPen basePen = QPen(lerp(palette().color(QPalette::Button), palette().color(QPalette::ButtonText), 0.2));
@@ -296,29 +281,32 @@ void AnimationTimeScrubber::paintRuler(QPainter &painter)
 
 	int primaryLength = 12;
 	int secondaryLength = 6;
-	double pixelPerTime = static_cast<double>(width()) / (m_ToTime - m_FromTime);
+	// double pixelPerTime = static_cast<double>(width()) / (m_ToTime - m_FromTime);
 
-	// Draw primary time ticks and labels
-	for (double time = m_FromTime; time <= m_ToTime; ++time)
+	double startTime = floor(m_FromTime / m_HorizontalPrimaryTimeInterval) * m_HorizontalPrimaryTimeInterval;
+	double endTime = ceil(m_ToTime / m_HorizontalPrimaryTimeInterval) * m_HorizontalPrimaryTimeInterval;
+
+	for (double time = startTime; time <= endTime; time += m_HorizontalPrimaryTimeInterval)
 	{
-		int x = xAtTime(time);
+		// Draw primary time ticks
+		int primaryX = xAtTime(time);
 		painter.setPen(darkPen);
-		painter.drawLine(x, height() - primaryLength, x, height());
+		painter.drawLine(primaryX - 1, 0, primaryX - 1, primaryLength);
 		painter.setPen(lightPen);
-		painter.drawLine(x, 0, x, height() - primaryLength);
+		painter.drawLine(primaryX, 0, primaryX, primaryLength);
 
-		QRect labelRect(x - 24, 0, 48, height() - primaryLength);
+		QRect labelRect(primaryX - 24, 0, 48, primaryLength);
 		painter.setPen(basePen);
 		painter.drawText(labelRect, Qt::AlignHCenter | Qt::AlignTop, QString::number(time, 'f', 2));
 
-		// Draw secondary time ticks
-		for (double secondaryTime = time + 1.0 / pixelPerTime; secondaryTime <= (time + 1.0 - 1.0 / pixelPerTime); secondaryTime += 1.0 / pixelPerTime)
+		for (double secondaryTime = time + m_HorizontalSecondaryTimeInterval; secondaryTime <= (time + m_HorizontalPrimaryTimeInterval - (m_HorizontalSecondaryTimeInterval / 2.0)); secondaryTime += m_HorizontalSecondaryTimeInterval)
 		{
+			// Draw secondary time ticks
 			int secondaryX = xAtTime(secondaryTime);
 			painter.setPen(darkPen);
-			painter.drawLine(secondaryX, height() - secondaryLength, secondaryX, height());
+			painter.drawLine(secondaryX - 1, 0, secondaryX - 1, secondaryLength);
 			painter.setPen(lightPen);
-			painter.drawLine(secondaryX, 0, secondaryX, height() - secondaryLength);
+			painter.drawLine(secondaryX, 0, secondaryX, secondaryLength);
 		}
 	}
 }
@@ -402,6 +390,42 @@ QRect AnimationTimeScrubber::toHandleRect() const
 	int handleY = height() - handleHeight;
 
 	return QRect(toX, handleY, handleWidth, handleHeight);
+}
+
+void AnimationTimeScrubber::recalculateRulerInverval()
+{
+	QRect grid = rulerRect();
+
+	const double targetPixelsPerPrimary = 100.0; // Target pixels per primary
+	double pixelsPerTime = grid.width() / (m_ToTime - m_FromTime);
+
+	const double pixelsPerSecond = pixelsPerTime;
+	const double pixelsPerMinute = pixelsPerSecond * 60.0;
+	const double pixelsPerHour = pixelsPerSecond * 3600.0;
+	const double pixelsPerDay = pixelsPerSecond * 86400.0;
+
+	double timeMultiplier = 1.0;
+	if (abs(pixelsPerSecond - targetPixelsPerPrimary) > abs(pixelsPerMinute - targetPixelsPerPrimary))
+	{
+		timeMultiplier = 60.0;
+		if (abs(pixelsPerMinute - targetPixelsPerPrimary) > abs(pixelsPerHour - targetPixelsPerPrimary))
+		{
+			timeMultiplier = 3600.0;
+			if (abs(pixelsPerHour - targetPixelsPerPrimary) > abs(pixelsPerDay - targetPixelsPerPrimary))
+				timeMultiplier = 86400.0;
+		}
+	}
+	pixelsPerTime *= timeMultiplier;
+	double primaryTimeInterval = targetPixelsPerPrimary / pixelsPerTime;
+	primaryTimeInterval = pow(10, round(log10(primaryTimeInterval)));
+	if (abs(pixelsPerTime * primaryTimeInterval - targetPixelsPerPrimary) > abs(pixelsPerTime * primaryTimeInterval * 2.0 - targetPixelsPerPrimary))
+		primaryTimeInterval *= 2.0;
+	else if (abs(pixelsPerTime * primaryTimeInterval - targetPixelsPerPrimary) > abs(pixelsPerTime * primaryTimeInterval * 0.5 - targetPixelsPerPrimary))
+		primaryTimeInterval *= 0.5;
+	m_HorizontalPrimaryTimeInterval = primaryTimeInterval * timeMultiplier;
+	m_HorizontalSecondaryTimeInterval = primaryTimeInterval * timeMultiplier * 0.1;
+
+	update();
 }
 
 /* end of file */

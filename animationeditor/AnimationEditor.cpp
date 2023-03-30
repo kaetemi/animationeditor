@@ -71,7 +71,7 @@ AnimationEditor::AnimationEditor(QWidget *parent)
     , m_TrackTreeWidget(new QTreeWidget(this))
     , m_TimelineEditor(new AnimationTimelineEditor(this))
     , m_CurveEditor(new AnimationCurveEditor(this, m_TrackTreeWidget))
-    , m_TimeScrubber(new AnimationTimeScrubber(this))
+    , m_TimeScrubber(new AnimationTimeScrubber(this, m_TrackTreeWidget))
 {
 	// Set up the toolbar
 	m_ToolBar->addAction("Action 1");
